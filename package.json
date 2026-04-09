@@ -1,6 +1,6 @@
 {
   "name": "modsharp-public-mcp",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "description": "MCP server providing ModSharp CS2 modding framework documentation and API reference for IDE-integrated AI agents",
   "type": "module",
   "main": "dist/index.js",
@@ -17,7 +17,12 @@
     "typecheck": "tsc --noEmit",
     "start": "node dist/index.js"
   },
-  "keywords": ["mcp", "modsharp", "counter-strike", "documentation"],
+  "keywords": [
+    "mcp",
+    "modsharp",
+    "counter-strike",
+    "documentation"
+  ],
   "author": "",
   "license": "ISC",
   "packageManager": "pnpm@10.13.1",

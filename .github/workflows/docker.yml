@@ -2,12 +2,11 @@ name: Build & Push Docker Image
 
 on:
   push:
-    branches: [main, develop]
     tags: ["v*.*.*"]
   workflow_dispatch:
     inputs:
       tag:
-        description: "Release tag (e.g. v1.2.3). Leave empty to build latest without creating a tag."
+        description: "Tag (e.g. v1.2.3, 1.2.3, beta). Leave empty to build with branch name only."
         required: false
         type: string
 
@@ -36,41 +35,41 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          if [[ "${GITHUB_REF_NAME}" != "main" && "${GITHUB_REF_NAME}" != "develop" ]]; then
-            echo "workflow_dispatch must run on 'main' or 'develop'." >&2; exit 1
-          fi
-
           TAG_INPUT="${{ inputs.tag }}"
           if [[ -z "$TAG_INPUT" ]]; then
-            echo "::notice::No tag provided, building with main + latest only."
+            echo "::notice::No semver provided, tags will be branch name only."
             echo "has_tag=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
           TAG="$TAG_INPUT"
           if [[ ! "$TAG" =~ ^v ]]; then TAG="v$TAG"; fi
-          if [[ ! "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "Invalid tag format: $TAG" >&2; exit 1
-          fi
-          VERSION="${TAG#v}"
-          echo "tag=$TAG"        >> "$GITHUB_OUTPUT"
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          echo "has_tag=true"    >> "$GITHUB_OUTPUT"
 
           if git ls-remote --tags --exit-code origin "refs/tags/$TAG" >/dev/null 2>&1; then
             echo "Tag already exists: $TAG" >&2; exit 1
           fi
 
-          node -e "const fs=require('fs');const p='package.json';const j=JSON.parse(fs.readFileSync(p,'utf8'));j.version='$VERSION';fs.writeFileSync(p, JSON.stringify(j,null,2)+'\n');"
-          git config user.name  "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add package.json
-          git commit -m "chore(release): $TAG"
+          echo "tag=$TAG"     >> "$GITHUB_OUTPUT"
+          echo "has_tag=true" >> "$GITHUB_OUTPUT"
+
+          if [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            VERSION="${TAG#v}"
+            echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+            echo "is_semver=true"   >> "$GITHUB_OUTPUT"
+            node -e "const fs=require('fs');const p='package.json';const j=JSON.parse(fs.readFileSync(p,'utf8'));j.version='$VERSION';fs.writeFileSync(p, JSON.stringify(j,null,2)+'\n');"
+            git config user.name  "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git add package.json
+            git commit -m "chore(release): $TAG"
+            git push origin "HEAD:${GITHUB_REF_NAME}"
+          else
+            echo "is_semver=false" >> "$GITHUB_OUTPUT"
+          fi
+
           git tag "$TAG"
-          git push origin "HEAD:${GITHUB_REF_NAME}"
           git push origin "refs/tags/$TAG"
 
-      - name: If dispatch, checkout tag
+      - name: If dispatch with tag, checkout it
         if: github.event_name == 'workflow_dispatch' && steps.prep.outputs.has_tag == 'true'
         run: |
           git fetch --tags origin
@@ -81,28 +80,57 @@ jobs:
         id: resolve
         shell: bash
         run: |
-          BRANCH="${GITHUB_REF_NAME}"
-          echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
+          set -euo pipefail
+
+          if [[ "${{ github.event_name }}" == "push" && "${GITHUB_REF}" == refs/tags/* ]]; then
+            # Tag push: GITHUB_REF_NAME is the tag, not a branch.
+            # Determine branch from the tag's target commit.
+            BRANCH="$(git branch -r --contains "$(git rev-parse HEAD)" \
+              | sed -n 's|.*origin/||p' \
+              | grep -E '^(main|develop)$' | head -1 || true)"
+            if [[ -z "$BRANCH" ]]; then BRANCH="main"; fi
+            TAG="${GITHUB_REF_NAME}"
+            echo "branch=$BRANCH"  >> "$GITHUB_OUTPUT"
+            echo "tag=$TAG"        >> "$GITHUB_OUTPUT"
+            echo "has_tag=true"    >> "$GITHUB_OUTPUT"
+            if [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+              VERSION="${TAG#v}"
+              echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+              echo "has_semver=true"  >> "$GITHUB_OUTPUT"
+            else
+              echo "has_semver=false" >> "$GITHUB_OUTPUT"
+            fi
+          else
+            BRANCH="${GITHUB_REF_NAME}"
+            echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
+            if [[ "${{ steps.prep.outputs.has_tag }}" == "true" ]]; then
+              echo "tag=${{ steps.prep.outputs.tag }}"        >> "$GITHUB_OUTPUT"
+              echo "has_tag=true"                              >> "$GITHUB_OUTPUT"
+              if [[ "${{ steps.prep.outputs.is_semver }}" == "true" ]]; then
+                echo "version=${{ steps.prep.outputs.version }}" >> "$GITHUB_OUTPUT"
+                echo "has_semver=true"                            >> "$GITHUB_OUTPUT"
+              else
+                echo "has_semver=false" >> "$GITHUB_OUTPUT"
+              fi
+            else
+              echo "has_tag=false"   >> "$GITHUB_OUTPUT"
+              echo "has_semver=false" >> "$GITHUB_OUTPUT"
+            fi
+          fi
 
           if [[ "$BRANCH" == "main" ]]; then
             echo "is_main=true" >> "$GITHUB_OUTPUT"
+            echo "is_develop=false" >> "$GITHUB_OUTPUT"
+          elif [[ "$BRANCH" == "develop" ]]; then
+            echo "is_main=false" >> "$GITHUB_OUTPUT"
+            echo "is_develop=true" >> "$GITHUB_OUTPUT"
           else
             echo "is_main=false" >> "$GITHUB_OUTPUT"
+            echo "is_develop=false" >> "$GITHUB_OUTPUT"
           fi
 
-          if [[ "${{ github.event_name }}" == "push" && "${GITHUB_REF}" == refs/tags/* ]]; then
-            TAG="${GITHUB_REF_NAME}"
-            VERSION="${TAG#v}"
-            echo "tag=$TAG"        >> "$GITHUB_OUTPUT"
-            echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-            echo "has_semver=true"  >> "$GITHUB_OUTPUT"
-          elif [[ "${{ steps.prep.outputs.has_tag }}" == "true" ]]; then
-            echo "tag=${{ steps.prep.outputs.tag }}"        >> "$GITHUB_OUTPUT"
-            echo "version=${{ steps.prep.outputs.version }}" >> "$GITHUB_OUTPUT"
-            echo "has_semver=true"                            >> "$GITHUB_OUTPUT"
-          else
-            echo "has_semver=false" >> "$GITHUB_OUTPUT"
-          fi
+          SHA="$(git rev-parse --short HEAD)"
+          echo "sha=$SHA" >> "$GITHUB_OUTPUT"
 
       # ── Docker build & push ──────────────────────────────
       - name: Set up Docker Buildx
@@ -121,10 +149,12 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
-            type=raw,value=${{ steps.resolve.outputs.branch }}
+            type=raw,value=develop,enable=${{ steps.resolve.outputs.is_develop == 'true' }}
             type=raw,value=latest,enable=${{ steps.resolve.outputs.is_main == 'true' }}
             type=semver,pattern={{version}},enable=${{ steps.resolve.outputs.has_semver == 'true' }}
             type=semver,pattern={{major}}.{{minor}},enable=${{ steps.resolve.outputs.has_semver == 'true' }}
+            type=raw,value=${{ steps.resolve.outputs.tag }},enable=${{ steps.resolve.outputs.has_semver == 'false' && steps.resolve.outputs.has_tag == 'true' }}
+            type=raw,value=${{ steps.resolve.outputs.sha }},enable=${{ steps.resolve.outputs.is_main == 'false' && steps.resolve.outputs.is_develop == 'false' && steps.resolve.outputs.has_tag == 'false' }}
 
       - name: Build and push
         uses: docker/build-push-action@v6

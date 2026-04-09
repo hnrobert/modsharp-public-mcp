@@ -1,0 +1,42 @@
+{
+  "name": "modsharp-public-mcp",
+  "version": "1.0.0",
+  "description": "MCP server providing ModSharp CS2 modding framework documentation and API reference for IDE-integrated AI agents",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "modsharp-mcp-server": "dist/index.js"
+  },
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsup",
+    "fetch": "tsx scripts/fetch-data.ts",
+    "build:data": "tsx scripts/fetch-data.ts && tsx scripts/build-data.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "start": "node dist/index.js"
+  },
+  "keywords": ["mcp", "modsharp", "counter-strike", "documentation"],
+  "author": "",
+  "license": "ISC",
+  "packageManager": "pnpm@10.13.1",
+  "engines": {
+    "node": ">=18"
+  },
+  "files": [
+    "dist/",
+    "data/generated/"
+  ],
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/node": "^25.5.2",
+    "tsup": "^8.5.1",
+    "tsx": "^4.21.0",
+    "typescript": "^6.0.2",
+    "vitest": "^4.1.4"
+  }
+}

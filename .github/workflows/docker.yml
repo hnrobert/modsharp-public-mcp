@@ -2,9 +2,18 @@ name: Build & Push Docker Image
 
 on:
   push:
-    branches: [main]
-    tags: ["v*"]
+    branches: [main, develop]
+    tags: ["v*.*.*"]
   workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag (e.g. v1.2.3). Leave empty to build latest without creating a tag."
+        required: false
+        type: string
+
+permissions:
+  contents: write
+  packages: write
 
 env:
   REGISTRY: ghcr.io
@@ -13,14 +22,89 @@ env:
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
+      # ── Dispatch: optionally create tag ───────────────────
+      - name: Handle dispatch tag
+        if: github.event_name == 'workflow_dispatch'
+        id: prep
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "${GITHUB_REF_NAME}" != "main" && "${GITHUB_REF_NAME}" != "develop" ]]; then
+            echo "workflow_dispatch must run on 'main' or 'develop'." >&2; exit 1
+          fi
+
+          TAG_INPUT="${{ inputs.tag }}"
+          if [[ -z "$TAG_INPUT" ]]; then
+            echo "::notice::No tag provided, building with main + latest only."
+            echo "has_tag=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          TAG="$TAG_INPUT"
+          if [[ ! "$TAG" =~ ^v ]]; then TAG="v$TAG"; fi
+          if [[ ! "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Invalid tag format: $TAG" >&2; exit 1
+          fi
+          VERSION="${TAG#v}"
+          echo "tag=$TAG"        >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "has_tag=true"    >> "$GITHUB_OUTPUT"
+
+          if git ls-remote --tags --exit-code origin "refs/tags/$TAG" >/dev/null 2>&1; then
+            echo "Tag already exists: $TAG" >&2; exit 1
+          fi
+
+          node -e "const fs=require('fs');const p='package.json';const j=JSON.parse(fs.readFileSync(p,'utf8'));j.version='$VERSION';fs.writeFileSync(p, JSON.stringify(j,null,2)+'\n');"
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add package.json
+          git commit -m "chore(release): $TAG"
+          git tag "$TAG"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
+          git push origin "refs/tags/$TAG"
+
+      - name: If dispatch, checkout tag
+        if: github.event_name == 'workflow_dispatch' && steps.prep.outputs.has_tag == 'true'
+        run: |
+          git fetch --tags origin
+          git checkout "${{ steps.prep.outputs.tag }}"
+
+      # ── Resolve metadata ─────────────────────────────────
+      - name: Resolve
+        id: resolve
+        shell: bash
+        run: |
+          BRANCH="${GITHUB_REF_NAME}"
+          echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
+
+          if [[ "$BRANCH" == "main" ]]; then
+            echo "is_main=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "is_main=false" >> "$GITHUB_OUTPUT"
+          fi
+
+          if [[ "${{ github.event_name }}" == "push" && "${GITHUB_REF}" == refs/tags/* ]]; then
+            TAG="${GITHUB_REF_NAME}"
+            VERSION="${TAG#v}"
+            echo "tag=$TAG"        >> "$GITHUB_OUTPUT"
+            echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+            echo "has_semver=true"  >> "$GITHUB_OUTPUT"
+          elif [[ "${{ steps.prep.outputs.has_tag }}" == "true" ]]; then
+            echo "tag=${{ steps.prep.outputs.tag }}"        >> "$GITHUB_OUTPUT"
+            echo "version=${{ steps.prep.outputs.version }}" >> "$GITHUB_OUTPUT"
+            echo "has_semver=true"                            >> "$GITHUB_OUTPUT"
+          else
+            echo "has_semver=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      # ── Docker build & push ──────────────────────────────
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -37,15 +121,16 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
-            type=ref,event=branch
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=${{ steps.resolve.outputs.branch }}
+            type=raw,value=latest,enable=${{ steps.resolve.outputs.is_main == 'true' }}
+            type=semver,pattern={{version}},enable=${{ steps.resolve.outputs.has_semver == 'true' }}
+            type=semver,pattern={{major}}.{{minor}},enable=${{ steps.resolve.outputs.has_semver == 'true' }}
 
       - name: Build and push
         uses: docker/build-push-action@v6
         with:
-          provenance: false # Disable provenance to avoid unknown/unknown
-          sbom: false # Disable sbom to avoid unknown/unknown
+          provenance: false
+          sbom: false
           context: .
           push: true
           tags: ${{ steps.meta.outputs.tags }}

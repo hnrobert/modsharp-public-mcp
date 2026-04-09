@@ -2,7 +2,7 @@ name: Build & Push Docker Image
 
 on:
   push:
-    branches: [main, master]
+    branches: [main]
     tags: ["v*"]
   workflow_dispatch:
 
@@ -40,11 +40,12 @@ jobs:
             type=ref,event=branch
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
-            type=sha,prefix=
 
       - name: Build and push
         uses: docker/build-push-action@v6
         with:
+          provenance: false # Disable provenance to avoid unknown/unknown
+          sbom: false # Disable sbom to avoid unknown/unknown
           context: .
           push: true
           tags: ${{ steps.meta.outputs.tags }}

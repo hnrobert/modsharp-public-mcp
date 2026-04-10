@@ -141,3 +141,8 @@ dist
 data/generated/**
 data/fetched/**
 !**/.gitkeep
+
+.mcp.json
+
+.DS_Store
+Thumbs.db

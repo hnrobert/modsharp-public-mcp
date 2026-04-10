@@ -17,9 +17,9 @@ export function registerSearchSchemasTool(server: McpServer, data: LoadedData): 
           .max(200)
           .describe("Search term (class name like 'CBaseEntity', field name like 'm_iHealth')"),
         category: z
-          .enum(["server", "client", "entity2", "all"])
+          .string()
           .default("all")
-          .describe("Schema category to search"),
+          .describe("Schema category to filter by (e.g. 'server', 'client', 'particles', 'animlib') or 'all'"),
         limit: z
           .number()
           .int()

@@ -47,15 +47,15 @@ Or pull directly from GHCR:
 
 ```bash
 docker pull ghcr.io/hnrobert/modsharp-public-mcp:latest
-docker run -d -p 3000:3000 -e MCP_TRANSPORT=http ghcr.io/hnrobert/modsharp-public-mcp:latest
+docker run -d -p 3045:3045 -e MCP_TRANSPORT=http ghcr.io/hnrobert/modsharp-public-mcp:latest
 ```
 
 The server exposes two transport endpoints:
 
 | Endpoint | Protocol | Clients |
 |----------|----------|---------|
-| `http://your-host:3000/sse` | SSE (2024-11-05) | Cursor, older clients |
-| `http://your-host:3000/mcp` | Streamable HTTP (2025-03-26) | Claude Code, newer clients |
+| `http://your-host:3045/sse` | SSE (2024-11-05) | Cursor, older clients |
+| `http://your-host:3045/mcp` | Streamable HTTP (2025-03-26) | Claude Code, newer clients |
 
 #### Claude Code
 
@@ -65,7 +65,7 @@ Add to `.mcp.json`:
 {
   "mcpServers": {
     "modsharp": {
-      "url": "http://your-host:3000/mcp"
+      "url": "http://your-host:3045/mcp"
     }
   }
 }
@@ -79,7 +79,7 @@ Add to `.cursor/mcp.json`:
 {
   "mcpServers": {
     "modsharp": {
-      "url": "http://your-host:3000/sse"
+      "url": "http://your-host:3045/sse"
     }
   }
 }

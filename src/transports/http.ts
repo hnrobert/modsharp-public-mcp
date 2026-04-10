@@ -9,7 +9,7 @@ import { createServer } from "../server.js";
 
 type Transport = SSEServerTransport | StreamableHTTPServerTransport;
 
-const PORT = parseInt(process.env.PORT || "3000", 10);
+const PORT = parseInt(process.env.PORT || "3045", 10);
 
 export function startHttp(data: LoadedData): void {
   const app = createMcpExpressApp();

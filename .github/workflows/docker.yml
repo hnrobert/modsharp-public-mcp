@@ -69,6 +69,26 @@ jobs:
           git tag "$TAG"
           git push origin "refs/tags/$TAG"
 
+      # ── Sync develop after release on main ────────────────
+      - name: Sync develop with main
+        if: steps.prep.outputs.is_semver == 'true' && github.ref == 'refs/heads/main'
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin develop
+          if ! git show-ref --verify --quiet refs/remotes/origin/develop; then
+            echo "::notice::develop branch does not exist, skipping sync."
+            exit 0
+          fi
+          git checkout develop
+          if [ "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)" ]; then
+            echo "::notice::develop is already up to date."
+            exit 0
+          fi
+          git merge --ff-only origin/main
+          git push origin develop
+          echo "::notice::develop synced with main."
+
       - name: If dispatch with tag, checkout it
         if: github.event_name == 'workflow_dispatch' && steps.prep.outputs.has_tag == 'true'
         run: |
@@ -96,6 +116,7 @@ jobs:
             if [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
               VERSION="${TAG#v}"
               echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+              echo "major_minor=$(echo "$VERSION" | cut -d. -f1,2)" >> "$GITHUB_OUTPUT"
               echo "has_semver=true"  >> "$GITHUB_OUTPUT"
             else
               echo "has_semver=false" >> "$GITHUB_OUTPUT"
@@ -108,6 +129,7 @@ jobs:
               echo "has_tag=true"                              >> "$GITHUB_OUTPUT"
               if [[ "${{ steps.prep.outputs.is_semver }}" == "true" ]]; then
                 echo "version=${{ steps.prep.outputs.version }}" >> "$GITHUB_OUTPUT"
+                echo "major_minor=$(echo "${{ steps.prep.outputs.version }}" | cut -d. -f1,2)" >> "$GITHUB_OUTPUT"
                 echo "has_semver=true"                            >> "$GITHUB_OUTPUT"
               else
                 echo "has_semver=false" >> "$GITHUB_OUTPUT"
@@ -151,8 +173,8 @@ jobs:
           tags: |
             type=raw,value=develop,enable=${{ steps.resolve.outputs.is_develop == 'true' }}
             type=raw,value=latest,enable=${{ steps.resolve.outputs.is_main == 'true' }}
-            type=semver,pattern={{version}},enable=${{ steps.resolve.outputs.has_semver == 'true' }}
-            type=semver,pattern={{major}}.{{minor}},enable=${{ steps.resolve.outputs.has_semver == 'true' }}
+            type=raw,value=${{ steps.resolve.outputs.version }},enable=${{ steps.resolve.outputs.has_semver == 'true' }}
+            type=raw,value=${{ steps.resolve.outputs.major_minor }},enable=${{ steps.resolve.outputs.has_semver == 'true' }}
             type=raw,value=${{ steps.resolve.outputs.tag }},enable=${{ steps.resolve.outputs.has_semver == 'false' && steps.resolve.outputs.has_tag == 'true' }}
             type=raw,value=${{ steps.resolve.outputs.sha }},enable=${{ steps.resolve.outputs.is_main == 'false' && steps.resolve.outputs.is_develop == 'false' && steps.resolve.outputs.has_tag == 'false' }}
 

@@ -116,6 +116,7 @@ jobs:
             if [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
               VERSION="${TAG#v}"
               echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+              echo "major_minor=$(echo "$VERSION" | cut -d. -f1,2)" >> "$GITHUB_OUTPUT"
               echo "has_semver=true"  >> "$GITHUB_OUTPUT"
             else
               echo "has_semver=false" >> "$GITHUB_OUTPUT"
@@ -128,6 +129,7 @@ jobs:
               echo "has_tag=true"                              >> "$GITHUB_OUTPUT"
               if [[ "${{ steps.prep.outputs.is_semver }}" == "true" ]]; then
                 echo "version=${{ steps.prep.outputs.version }}" >> "$GITHUB_OUTPUT"
+                echo "major_minor=$(echo "${{ steps.prep.outputs.version }}" | cut -d. -f1,2)" >> "$GITHUB_OUTPUT"
                 echo "has_semver=true"                            >> "$GITHUB_OUTPUT"
               else
                 echo "has_semver=false" >> "$GITHUB_OUTPUT"
@@ -171,8 +173,8 @@ jobs:
           tags: |
             type=raw,value=develop,enable=${{ steps.resolve.outputs.is_develop == 'true' }}
             type=raw,value=latest,enable=${{ steps.resolve.outputs.is_main == 'true' }}
-            type=semver,pattern={{version}},enable=${{ steps.resolve.outputs.has_semver == 'true' }}
-            type=semver,pattern={{major}}.{{minor}},enable=${{ steps.resolve.outputs.has_semver == 'true' }}
+            type=raw,value=${{ steps.resolve.outputs.version }},enable=${{ steps.resolve.outputs.has_semver == 'true' }}
+            type=raw,value=${{ steps.resolve.outputs.major_minor }},enable=${{ steps.resolve.outputs.has_semver == 'true' }}
             type=raw,value=${{ steps.resolve.outputs.tag }},enable=${{ steps.resolve.outputs.has_semver == 'false' && steps.resolve.outputs.has_tag == 'true' }}
             type=raw,value=${{ steps.resolve.outputs.sha }},enable=${{ steps.resolve.outputs.is_main == 'false' && steps.resolve.outputs.is_develop == 'false' && steps.resolve.outputs.has_tag == 'false' }}
 

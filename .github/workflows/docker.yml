@@ -2,9 +2,17 @@ name: Build & Push Docker Image
 
 on:
   push:
-    branches: [main]
-    tags: ["v*"]
+    tags: ["v*.*.*"]
   workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag (e.g. v1.2.3, 1.2.3, beta). Leave empty to build with branch name only."
+        required: false
+        type: string
+
+permissions:
+  contents: write
+  packages: write
 
 env:
   REGISTRY: ghcr.io
@@ -13,14 +21,118 @@ env:
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
+      # ── Dispatch: optionally create tag ───────────────────
+      - name: Handle dispatch tag
+        if: github.event_name == 'workflow_dispatch'
+        id: prep
+        shell: bash
+        run: |
+          set -euo pipefail
+          TAG_INPUT="${{ inputs.tag }}"
+          if [[ -z "$TAG_INPUT" ]]; then
+            echo "::notice::No semver provided, tags will be branch name only."
+            echo "has_tag=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          TAG="$TAG_INPUT"
+          if [[ ! "$TAG" =~ ^v ]]; then TAG="v$TAG"; fi
+
+          if git ls-remote --tags --exit-code origin "refs/tags/$TAG" >/dev/null 2>&1; then
+            echo "Tag already exists: $TAG" >&2; exit 1
+          fi
+
+          echo "tag=$TAG"     >> "$GITHUB_OUTPUT"
+          echo "has_tag=true" >> "$GITHUB_OUTPUT"
+
+          if [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            VERSION="${TAG#v}"
+            echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+            echo "is_semver=true"   >> "$GITHUB_OUTPUT"
+            node -e "const fs=require('fs');const p='package.json';const j=JSON.parse(fs.readFileSync(p,'utf8'));j.version='$VERSION';fs.writeFileSync(p, JSON.stringify(j,null,2)+'\n');"
+            git config user.name  "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git add package.json
+            git commit -m "chore(release): $TAG"
+            git push origin "HEAD:${GITHUB_REF_NAME}"
+          else
+            echo "is_semver=false" >> "$GITHUB_OUTPUT"
+          fi
+
+          git tag "$TAG"
+          git push origin "refs/tags/$TAG"
+
+      - name: If dispatch with tag, checkout it
+        if: github.event_name == 'workflow_dispatch' && steps.prep.outputs.has_tag == 'true'
+        run: |
+          git fetch --tags origin
+          git checkout "${{ steps.prep.outputs.tag }}"
+
+      # ── Resolve metadata ─────────────────────────────────
+      - name: Resolve
+        id: resolve
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ "${{ github.event_name }}" == "push" && "${GITHUB_REF}" == refs/tags/* ]]; then
+            # Tag push: GITHUB_REF_NAME is the tag, not a branch.
+            # Determine branch from the tag's target commit.
+            BRANCH="$(git branch -r --contains "$(git rev-parse HEAD)" \
+              | sed -n 's|.*origin/||p' \
+              | grep -E '^(main|develop)$' | head -1 || true)"
+            if [[ -z "$BRANCH" ]]; then BRANCH="main"; fi
+            TAG="${GITHUB_REF_NAME}"
+            echo "branch=$BRANCH"  >> "$GITHUB_OUTPUT"
+            echo "tag=$TAG"        >> "$GITHUB_OUTPUT"
+            echo "has_tag=true"    >> "$GITHUB_OUTPUT"
+            if [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+              VERSION="${TAG#v}"
+              echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+              echo "has_semver=true"  >> "$GITHUB_OUTPUT"
+            else
+              echo "has_semver=false" >> "$GITHUB_OUTPUT"
+            fi
+          else
+            BRANCH="${GITHUB_REF_NAME}"
+            echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
+            if [[ "${{ steps.prep.outputs.has_tag }}" == "true" ]]; then
+              echo "tag=${{ steps.prep.outputs.tag }}"        >> "$GITHUB_OUTPUT"
+              echo "has_tag=true"                              >> "$GITHUB_OUTPUT"
+              if [[ "${{ steps.prep.outputs.is_semver }}" == "true" ]]; then
+                echo "version=${{ steps.prep.outputs.version }}" >> "$GITHUB_OUTPUT"
+                echo "has_semver=true"                            >> "$GITHUB_OUTPUT"
+              else
+                echo "has_semver=false" >> "$GITHUB_OUTPUT"
+              fi
+            else
+              echo "has_tag=false"   >> "$GITHUB_OUTPUT"
+              echo "has_semver=false" >> "$GITHUB_OUTPUT"
+            fi
+          fi
+
+          if [[ "$BRANCH" == "main" ]]; then
+            echo "is_main=true" >> "$GITHUB_OUTPUT"
+            echo "is_develop=false" >> "$GITHUB_OUTPUT"
+          elif [[ "$BRANCH" == "develop" ]]; then
+            echo "is_main=false" >> "$GITHUB_OUTPUT"
+            echo "is_develop=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "is_main=false" >> "$GITHUB_OUTPUT"
+            echo "is_develop=false" >> "$GITHUB_OUTPUT"
+          fi
+
+          SHA="$(git rev-parse --short HEAD)"
+          echo "sha=$SHA" >> "$GITHUB_OUTPUT"
+
+      # ── Docker build & push ──────────────────────────────
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -37,15 +149,18 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
-            type=ref,event=branch
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=develop,enable=${{ steps.resolve.outputs.is_develop == 'true' }}
+            type=raw,value=latest,enable=${{ steps.resolve.outputs.is_main == 'true' }}
+            type=semver,pattern={{version}},enable=${{ steps.resolve.outputs.has_semver == 'true' }}
+            type=semver,pattern={{major}}.{{minor}},enable=${{ steps.resolve.outputs.has_semver == 'true' }}
+            type=raw,value=${{ steps.resolve.outputs.tag }},enable=${{ steps.resolve.outputs.has_semver == 'false' && steps.resolve.outputs.has_tag == 'true' }}
+            type=raw,value=${{ steps.resolve.outputs.sha }},enable=${{ steps.resolve.outputs.is_main == 'false' && steps.resolve.outputs.is_develop == 'false' && steps.resolve.outputs.has_tag == 'false' }}
 
       - name: Build and push
         uses: docker/build-push-action@v6
         with:
-          provenance: false # Disable provenance to avoid unknown/unknown
-          sbom: false # Disable sbom to avoid unknown/unknown
+          provenance: false
+          sbom: false
           context: .
           push: true
           tags: ${{ steps.meta.outputs.tags }}

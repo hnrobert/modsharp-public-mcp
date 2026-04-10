@@ -95,6 +95,28 @@ export interface TocNode {
   children?: TocNode[];
 }
 
+// === CS2 Schema Types ===
+export interface SchemaClass {
+  uid: string;              // "server/CBaseEntity" or "client/C_CSPlayerPawn"
+  name: string;             // "CBaseEntity"
+  parent?: string;          // "CEntityInstance"
+  category: string;         // "server", "client", "entity2", etc.
+  sourceFile: string;       // "server/CBaseEntity.h"
+  networkVars: SchemaField[];
+  localFields: SchemaField[];
+  kv3Defaults?: Record<string, string>;
+}
+
+export interface SchemaField {
+  name: string;
+  type: string;
+  isNetworked: boolean;
+  networkPriority?: number;
+  networkUserGroup?: string;
+  serializer?: string;
+  notSaved?: boolean;
+}
+
 // === Loaded Data (runtime) ===
 export interface LoadedData {
   types: Map<string, ApiTypeInfo>;
@@ -102,6 +124,7 @@ export interface LoadedData {
   docsEn: DocArticle[];
   docsCn: DocArticle[];
   examples: Map<string, CodeExample>;
+  schemas: Map<string, SchemaClass>;
   searchIndex: Map<string, string[]>;
   toc: TocNode[];
   methodsIndex: Map<string, string[]>; // lowercase method name -> type UIDs
@@ -110,7 +133,7 @@ export interface LoadedData {
 // === Tool result types ===
 export interface SearchResult {
   id: string;
-  type: "doc" | "api-type" | "example";
+  type: "doc" | "api-type" | "example" | "schema";
   title: string;
   locale?: Locale;
   snippet: string;

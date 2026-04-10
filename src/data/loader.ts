@@ -5,6 +5,7 @@ import type {
   NamespaceInfo,
   DocArticle,
   CodeExample,
+  SchemaClass,
   TocNode,
   LoadedData,
 } from "../types.js";
@@ -18,13 +19,14 @@ async function readJson<T>(filename: string): Promise<T> {
 }
 
 export async function loadData(): Promise<LoadedData> {
-  const [apiTypes, apiIndex, docsEn, docsCn, examples, searchIndexRaw, toc] =
+  const [apiTypes, apiIndex, docsEn, docsCn, examples, schemasRaw, searchIndexRaw, toc] =
     await Promise.all([
       readJson<Record<string, ApiTypeInfo>>("api-types.json"),
       readJson<{ namespaces: Record<string, NamespaceInfo> }>("api-index.json"),
       readJson<DocArticle[]>("docs-en.json"),
       readJson<DocArticle[]>("docs-cn.json"),
       readJson<CodeExample[]>("examples.json"),
+      readJson<Record<string, SchemaClass>>("schemas.json"),
       readJson<{ tokens: Record<string, string[]> }>("search-index.json"),
       readJson<TocNode[]>("toc.json"),
     ]);
@@ -37,6 +39,7 @@ export async function loadData(): Promise<LoadedData> {
   const examplesMap = new Map<string, CodeExample>(
     examples.map((e) => [e.id, e])
   );
+  const schemas = new Map<string, SchemaClass>(Object.entries(schemasRaw));
   const searchIndex = new Map<string, string[]>(
     Object.entries(searchIndexRaw.tokens)
   );
@@ -63,6 +66,7 @@ export async function loadData(): Promise<LoadedData> {
     docsEn,
     docsCn,
     examples: examplesMap,
+    schemas,
     searchIndex,
     toc,
     methodsIndex,

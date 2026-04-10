@@ -21,6 +21,7 @@
         "pipefail",
         "seealso",
         "stylelintcache",
+        "Vars",
         "vitepress",
         "vuepress",
         "wscript"

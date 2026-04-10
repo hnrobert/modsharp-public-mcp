@@ -1,6 +1,6 @@
-import { readFile, writeFile, mkdir } from "node:fs/promises";
+import { readFile, writeFile } from "node:fs/promises";
 import { resolve, join } from "node:path";
-import type { ApiTypeInfo, DocArticle, CodeExample, SearchIndex } from "../src/types.js";
+import type { ApiTypeInfo, DocArticle, CodeExample, SchemaClass, SearchIndex } from "../src/types.js";
 
 const PROJECT_ROOT = resolve(import.meta.dirname, "..");
 const OUTPUT_DIR = resolve(PROJECT_ROOT, "data/generated");
@@ -31,17 +31,19 @@ function tokenize(text: string): string[] {
 async function main() {
   console.log("Generating search index...");
 
-  const [apiTypesRaw, docsEnRaw, docsCnRaw, examplesRaw] = await Promise.all([
+  const [apiTypesRaw, docsEnRaw, docsCnRaw, examplesRaw, schemasRaw] = await Promise.all([
     readFile(join(OUTPUT_DIR, "api-types.json"), "utf-8"),
     readFile(join(OUTPUT_DIR, "docs-en.json"), "utf-8"),
     readFile(join(OUTPUT_DIR, "docs-cn.json"), "utf-8"),
     readFile(join(OUTPUT_DIR, "examples.json"), "utf-8"),
+    readFile(join(OUTPUT_DIR, "schemas.json"), "utf-8"),
   ]);
 
   const apiTypes = JSON.parse(apiTypesRaw) as Record<string, ApiTypeInfo>;
   const docsEn = JSON.parse(docsEnRaw) as DocArticle[];
   const docsCn = JSON.parse(docsCnRaw) as DocArticle[];
   const examples = JSON.parse(examplesRaw) as CodeExample[];
+  const schemas = JSON.parse(schemasRaw) as Record<string, SchemaClass>;
 
   // Build inverted index: token -> entity IDs
   const invertedIndex = new Map<string, string[]>();
@@ -77,6 +79,17 @@ async function main() {
   for (const ex of examples) {
     const text = `${ex.title} ${ex.code.slice(0, 1000)}`;
     addTokens(tokenize(text), `example:${ex.id}`);
+  }
+
+  // Index CS2 schemas
+  for (const [uid, schema] of Object.entries(schemas)) {
+    const text = [
+      schema.name,
+      schema.parent || "",
+      ...schema.networkVars.map((f) => `${f.name} ${f.type}`),
+      ...schema.localFields.map((f) => `${f.name} ${f.type}`),
+    ].join(" ");
+    addTokens(tokenize(text), `schema:${uid}`);
   }
 
   // Deduplicate index entries and convert to plain object

@@ -4,93 +4,141 @@ import { resolve, dirname } from "node:path";
 const PROJECT_ROOT = resolve(import.meta.dirname, "..");
 const FETCHED_DIR = resolve(PROJECT_ROOT, "data/fetched");
 
-const OWNER = "Kxnrl";
-const REPO = "modsharp-public";
-const BRANCH = "master";
-const API = "https://api.github.com";
-const RAW = `https://raw.githubusercontent.com/${OWNER}/${REPO}/${BRANCH}`;
-
 interface TreeEntry {
   path: string;
   type: "blob" | "tree";
   size?: number;
 }
 
-const TREE_PREFIXES = ["Sharp.Shared/", "docfx/docs/", "docfx/toc.yml"];
-const DOWNLOAD_EXTENSIONS = new Set([".cs", ".md", ".yml", ".yaml", ".xml"]);
+// ── Config per source repo ──────────────────────────────────────────
 
-function shouldDownload(path: string): boolean {
-  if (path === "docfx/toc.yml") return true;
-  const dot = path.lastIndexOf(".");
+interface SourceRepo {
+  owner: string;
+  repo: string;
+  branch: string;
+  prefixes: string[];        // git path prefixes to include
+  extensions: Set<string>;   // file extensions to download
+  remap: (gitPath: string) => string;  // git path -> local path under fetched/
+  extraFiles?: string[];     // exact paths to always include
+}
+
+const MODSHARP: SourceRepo = {
+  owner: "Kxnrl",
+  repo: "modsharp-public",
+  branch: "master",
+  prefixes: ["Sharp.Shared/", "docfx/docs/"],
+  extensions: new Set([".cs", ".md", ".yml", ".yaml", ".xml"]),
+  extraFiles: ["docfx/toc.yml"],
+  remap(gitPath: string): string {
+    if (gitPath.startsWith("docfx/docs/")) return gitPath.replace("docfx/docs/", "docs/");
+    if (gitPath === "docfx/toc.yml") return "toc.yml";
+    return gitPath;
+  },
+};
+
+// All CS2/Source2 engine schema directories
+const SCHEMA_CATEGORIES = [
+  "animationsystem", "animdoclib", "animgraphdoclib", "animgraphlib",
+  "animlib", "client", "compositematerialslib", "entity2",
+  "hammer", "host", "mapdoclib", "materialsystem2",
+  "mathlib_extended", "met", "modeldoc_editor", "modellib",
+  "modtools", "navlib", "networksystem", "panorama_content",
+  "particles", "particleslib", "physicslib", "pulse_runtime_lib",
+  "pulse_system", "pulsedoc_lib", "qcontrols", "rendersystemdx11",
+  "resourcecompiler", "resourcefile", "resourcesystem", "scenesystem",
+  "schemasystem", "server", "smartprops", "sounddoc_lib",
+  "soundsystem", "soundsystem_lowlevel", "soundsystem_voicecontainers",
+  "steamaudio", "texturelib", "tier2", "toolscene", "toolutils2",
+  "vphysics2", "worldrenderer",
+];
+
+const CS2_SCHEMAS: SourceRepo = {
+  owner: "SteamTracking",
+  repo: "GameTracking-CS2",
+  branch: "master",
+  prefixes: SCHEMA_CATEGORIES.map((c) => `DumpSource2/schemas/${c}/`),
+  extensions: new Set([".h"]),
+  remap(gitPath: string): string {
+    // DumpSource2/schemas/server/Foo.h -> schemas/server/Foo.h
+    return gitPath.replace("DumpSource2/schemas/", "schemas/");
+  },
+};
+
+// ── Helpers ─────────────────────────────────────────────────────────
+
+function shouldFetch(entry: TreeEntry, src: SourceRepo): boolean {
+  if (src.extraFiles?.includes(entry.path)) return true;
+  const dot = entry.path.lastIndexOf(".");
   if (dot === -1) return false;
-  return DOWNLOAD_EXTENSIONS.has(path.slice(dot));
+  return src.prefixes.some((p) => entry.path.startsWith(p))
+    && src.extensions.has(entry.path.slice(dot));
 }
 
-function remapPath(gitPath: string): string {
-  if (gitPath.startsWith("docfx/docs/")) return gitPath.replace("docfx/docs/", "docs/");
-  if (gitPath === "docfx/toc.yml") return "toc.yml";
-  return gitPath; // Sharp.Shared/ stays as-is
-}
-
-async function getTree(): Promise<TreeEntry[]> {
-  console.log("Fetching git tree...");
-  const res = await fetch(`${API}/repos/${OWNER}/${REPO}/git/trees/${BRANCH}?recursive=1`, {
-    headers: { "User-Agent": "modsharp-mcp-fetch" },
-  });
-  if (!res.ok) throw new Error(`GitHub API ${res.status}: ${await res.text()}`);
+async function fetchTree(src: SourceRepo): Promise<TreeEntry[]> {
+  const url = `https://api.github.com/repos/${src.owner}/${src.repo}/git/trees/${src.branch}?recursive=1`;
+  console.log(`  Fetching tree: ${src.owner}/${src.repo}...`);
+  const res = await fetch(url, { headers: { "User-Agent": "modsharp-mcp-fetch" } });
+  if (!res.ok) throw new Error(`GitHub API ${res.status} (${url}): ${await res.text()}`);
   const data = await res.json() as { tree: TreeEntry[]; truncated: boolean };
-  if (data.truncated) console.warn("Warning: tree was truncated");
-  return data.tree.filter(
-    (e) => e.type === "blob" && TREE_PREFIXES.some((p) => e.path.startsWith(p))
-  );
+  if (data.truncated) console.warn(`  Warning: tree truncated for ${src.repo}`);
+  return data.tree.filter((e) => e.type === "blob");
 }
 
-async function downloadFile(entry: TreeEntry): Promise<boolean> {
-  const targetPath = resolve(FETCHED_DIR, remapPath(entry.path));
+async function downloadFile(src: SourceRepo, entry: TreeEntry): Promise<boolean> {
+  const localPath = resolve(FETCHED_DIR, src.remap(entry.path));
 
-  // Skip if file exists and size matches (cache)
+  // Cache by file size
   if (entry.size != null) {
     try {
-      const st = await stat(targetPath);
+      const st = await stat(localPath);
       if (st.size === entry.size) return false;
-    } catch { /* not cached yet */ }
+    } catch { /* not cached */ }
   }
 
-  await mkdir(dirname(targetPath), { recursive: true });
-
-  const res = await fetch(`${RAW}/${entry.path}`, {
-    headers: { "User-Agent": "modsharp-mcp-fetch" },
-  });
+  await mkdir(dirname(localPath), { recursive: true });
+  const rawUrl = `https://raw.githubusercontent.com/${src.owner}/${src.repo}/${src.branch}/${entry.path}`;
+  const res = await fetch(rawUrl, { headers: { "User-Agent": "modsharp-mcp-fetch" } });
   if (!res.ok) {
     console.warn(`  Skip ${entry.path}: HTTP ${res.status}`);
     return false;
   }
-
-  await writeFile(targetPath, await res.text(), "utf-8");
+  await writeFile(localPath, await res.text(), "utf-8");
   return true;
 }
 
-async function main(): Promise<void> {
-  console.log(`Fetching from github.com/${OWNER}/${REPO} (${BRANCH})\n`);
-  await mkdir(FETCHED_DIR, { recursive: true });
-
-  const tree = await getTree();
-  const toDownload = tree.filter((e) => shouldDownload(e.path));
-  console.log(`Found ${tree.length} files, downloading ${toDownload.length} source files...\n`);
+async function fetchFromSource(src: SourceRepo): Promise<void> {
+  const allEntries = await fetchTree(src);
+  const toDownload = allEntries.filter((e) => shouldFetch(e, src));
+  console.log(`  ${toDownload.length} files to download\n`);
 
   const BATCH = 20;
   let downloaded = 0;
 
   for (let i = 0; i < toDownload.length; i += BATCH) {
     const batch = toDownload.slice(i, i + BATCH);
-    const results = await Promise.all(batch.map((e) => downloadFile(e)));
+    const results = await Promise.all(batch.map((e) => downloadFile(src, e)));
     downloaded += results.filter(Boolean).length;
     const done = Math.min(i + BATCH, toDownload.length);
     process.stdout.write(`  ${done}/${toDownload.length} files processed\r`);
   }
 
   const cached = toDownload.length - downloaded;
-  console.log(`\n\nDone! ${downloaded} downloaded, ${cached} cached.`);
+  console.log(`\n  ${downloaded} downloaded, ${cached} cached.\n`);
+}
+
+// ── Main ────────────────────────────────────────────────────────────
+
+async function main(): Promise<void> {
+  console.log("Fetching source data from GitHub...\n");
+  await mkdir(FETCHED_DIR, { recursive: true });
+
+  console.log("── ModSharp (Kxnrl/modsharp-public) ──");
+  await fetchFromSource(MODSHARP);
+
+  console.log("── CS2 Schemas (SteamTracking/GameTracking-CS2) ──");
+  await fetchFromSource(CS2_SCHEMAS);
+
+  console.log("Done! All source data fetched.");
 }
 
 main().catch((err) => {

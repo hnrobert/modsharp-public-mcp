@@ -78,6 +78,18 @@ export function registerSearchDocsTool(server: McpServer, data: LoadedData): voi
         });
       }
 
+      // Add CS2 schemas
+      for (const [uid, schema] of data.schemas) {
+        const text = `${schema.name} ${schema.parent || ""} ${schema.networkVars.map((f) => f.name).join(" ")}`;
+        entries.push({
+          id: uid,
+          title: schema.name,
+          tokens: tokenize(text),
+          content: `${schema.name} extends ${schema.parent || "none"} (${schema.networkVars.length} net vars, ${schema.localFields.length} fields)`,
+          type: "schema",
+        });
+      }
+
       const results = searchEntries(query, entries, limit ?? 10);
       const total = results.length;
 

@@ -66,27 +66,31 @@ Add to `.cursor/mcp.json`:
 
 | Tool | Description |
 |------|-------------|
-| `search_docs` | Full-text search across all documentation, API types, and examples |
-| `search_api` | Search API types and members by keyword |
-| `get_api_type` | Get full details of a specific API type |
-| `list_namespace` | Browse the namespace/type hierarchy |
+| `search_docs` | Full-text search across all documentation, API types, examples, and CS2 schemas |
+| `search_api` | Search ModSharp API types and members by keyword |
+| `get_api_type` | Get full details of a specific ModSharp API type |
+| `list_namespace` | Browse the ModSharp namespace/type hierarchy |
 | `get_guide` | Retrieve a documentation article |
 | `get_code_example` | Get a code example by ID |
+| `search_schemas` | Search CS2 engine schema classes (CBaseEntity, C_CSPlayerPawn, etc.) |
+| `get_schema_type` | Get full details of a CS2 schema class (fields, network vars) |
 
 ## MCP Resources
 
-- `modsharp://api/{namespace}/{typeName}` - API type info (JSON)
+- `modsharp://api/{namespace}/{typeName}` - ModSharp API type info (JSON)
 - `modsharp://docs/{locale}/{path}` - Documentation articles (Markdown)
 - `modsharp://examples/{id}` - Code examples (plain text)
+- `modsharp://schema/{category}/{className}` - CS2 engine schema classes (JSON)
 - `modsharp://namespaces` - Full namespace hierarchy (JSON)
 - `modsharp://toc` - Documentation table of contents (JSON)
 
-## Data Stats
+## Data Stats (as of 2026-04-10)
 
-- **326** parsed C# types with **3,772** members
+- **326** ModSharp API types with **3,772** members
+- **2,536** CS2/Source2 engine schema classes across **44** categories with **3,141** network fields
 - **44** English + **44** Chinese documentation articles
 - **34** code examples
-- **6,699** search index tokens
+- **23,153** search index tokens
 
 ## Development
 
@@ -104,7 +108,8 @@ pnpm typecheck    # Type check
 ```mermaid
 graph LR
   subgraph build["Build-time (pnpm build:data)"]
-    A[GitHub API<br/>Kxnrl/modsharp-public] -->|fetch| B[data/fetched/<br/>local cache]
+    A[GitHub: Kxnrl/modsharp-public<br/>ModSharp C# SDK + Docs] -->|fetch| B[data/fetched/<br/>local cache]
+    F[GitHub: SteamTracking/GameTracking-CS2<br/>CS2 Engine Schemas] -->|fetch| B
     B -->|parse| C[data/generated/<br/>JSON data]
   end
   subgraph runtime["Runtime (pnpm start)"]
@@ -115,8 +120,8 @@ graph LR
 
 **Build-time** (no network at runtime):
 
-1. `pnpm fetch` — Downloads source files from GitHub via API, caches by file size
-2. Parse — Extracts API types from C# sources and articles from markdown
+1. `pnpm fetch` — Downloads source files from GitHub (modsharp-public + GameTracking-CS2), caches by file size
+2. Parse — Extracts API types from C# sources, articles from markdown, CS2 schemas from engine headers
 3. Index — Builds a token-based search index
 
 **Runtime** (offline, no network needed):

@@ -40,7 +40,7 @@ export interface SearchEntry {
   /** Original content for snippet extraction */
   content: string;
   locale?: string;
-  type: "doc" | "api-type" | "example";
+  type: "doc" | "api-type" | "example" | "schema";
 }
 
 export function buildSearchEntries(
@@ -53,7 +53,7 @@ export function buildSearchEntries(
 
 export interface TextSearchResult {
   id: string;
-  type: "doc" | "api-type" | "example";
+  type: "doc" | "api-type" | "example" | "schema";
   title: string;
   snippet: string;
   locale?: string;

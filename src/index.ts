@@ -8,9 +8,11 @@ const TRANSPORT = process.env.MCP_TRANSPORT || "stdio";
 async function main(): Promise<void> {
   const data = await loadData();
 
-  if (TRANSPORT === "http") {
+  if (TRANSPORT === "http" || TRANSPORT === "all") {
     startHttp(data);
-  } else {
+  }
+
+  if (TRANSPORT === "stdio" || TRANSPORT === "all") {
     const server = createServer(data);
     await startStdio(server);
   }

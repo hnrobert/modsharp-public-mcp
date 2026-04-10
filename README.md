@@ -32,22 +32,46 @@ The `build:data` command automatically fetches the latest source files from [git
 
 ## IDE Configuration
 
-### Claude Code
+### Option A: Remote Server (Docker)
 
-Add to `.mcp.json` in your project root:
+Deploy as an online MCP service — no local Node.js or data build needed.
+
+```bash
+# Clone and start
+git clone https://github.com/hnrobert/modsharp-public-mcp.git
+cd modsharp-public-mcp
+docker compose up -d
+```
+
+Or pull directly from GHCR:
+
+```bash
+docker pull ghcr.io/hnrobert/modsharp-public-mcp:latest
+docker run -d -p 3000:3000 -e MCP_TRANSPORT=http ghcr.io/hnrobert/modsharp-public-mcp:latest
+```
+
+The server exposes two transport endpoints:
+
+| Endpoint | Protocol | Clients |
+|----------|----------|---------|
+| `http://your-host:3000/sse` | SSE (2024-11-05) | Cursor, older clients |
+| `http://your-host:3000/mcp` | Streamable HTTP (2025-03-26) | Claude Code, newer clients |
+
+#### Claude Code
+
+Add to `.mcp.json`:
 
 ```json
 {
   "mcpServers": {
     "modsharp": {
-      "command": "node",
-      "args": ["/path/to/modsharp-public-mcp/dist/index.js"]
+      "url": "http://your-host:3000/mcp"
     }
   }
 }
 ```
 
-### Cursor
+#### Cursor
 
 Add to `.cursor/mcp.json`:
 
@@ -55,12 +79,38 @@ Add to `.cursor/mcp.json`:
 {
   "mcpServers": {
     "modsharp": {
-      "command": "node",
-      "args": ["/path/to/modsharp-public-mcp/dist/index.js"]
+      "url": "http://your-host:3000/sse"
     }
   }
 }
 ```
+
+### Option B: Local Docker (stdio)
+
+```bash
+docker pull ghcr.io/hnrobert/modsharp-public-mcp:latest
+```
+
+Use in IDE config:
+
+```json
+{
+  "mcpServers": {
+    "modsharp": {
+      "command": "docker",
+      "args": ["run", "--rm", "-i", "ghcr.io/hnrobert/modsharp-public-mcp:latest"]
+    }
+  }
+}
+```
+
+### Option C: Local Node.js
+
+```bash
+pnpm install && pnpm build:data && pnpm build
+```
+
+Then use `"command": "node", "args": ["/path/to/modsharp-public-mcp/dist/index.js"]` in the config above.
 
 ## MCP Tools
 
@@ -107,26 +157,30 @@ pnpm typecheck    # Type check
 
 ```mermaid
 graph LR
-  subgraph build["Build-time (pnpm build:data)"]
-    A[GitHub: Kxnrl/modsharp-public<br/>ModSharp C# SDK + Docs] -->|fetch| B[data/fetched/<br/>local cache]
+  subgraph build["Build-time (docker build / pnpm build:data)"]
+    A[GitHub: Kxnrl/modsharp-public<br/>ModSharp C# SDK + Docs] -->|fetch| B[data/fetched/<br/>source cache]
     F[GitHub: SteamTracking/GameTracking-CS2<br/>CS2 Engine Schemas] -->|fetch| B
-    B -->|parse| C[data/generated/<br/>JSON data]
+    B -->|parse + index| C[data/generated/<br/>JSON data]
   end
-  subgraph runtime["Runtime (pnpm start)"]
-    C -->|load| D[MCP server<br/>stdio transport]
-    D --> E[IDE Agent<br/>Claude Code / Cursor]
+  subgraph runtime["Runtime (MCP_TRANSPORT=stdio | http)"]
+    C -->|load| D[MCP server]
+    D -->|stdio| E[Local IDE]
+    D -->|HTTP SSE / Streamable| G[Remote IDEs]
   end
 ```
 
-**Build-time** (no network at runtime):
+**Build-time** (baked into Docker image, no network at runtime):
 
-1. `pnpm fetch` — Downloads source files from GitHub (modsharp-public + GameTracking-CS2), caches by file size
+1. Fetch — Downloads source files from GitHub (modsharp-public + GameTracking-CS2), caches locally
 2. Parse — Extracts API types from C# sources, articles from markdown, CS2 schemas from engine headers
 3. Index — Builds a token-based search index
 
-**Runtime** (offline, no network needed):
+Only `data/generated/` (final JSON) enters the Docker image.
 
-- MCP server loads generated JSON into memory, serves via stdio transport
+**Runtime** (fully offline, no network needed):
+
+- `MCP_TRANSPORT=stdio` (default) — local IDE via stdin/stdout
+- `MCP_TRANSPORT=http` — remote IDEs via HTTP (`/sse` + `/mcp` endpoints)
 
 <!-- ## License -->
 

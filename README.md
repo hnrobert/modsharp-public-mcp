@@ -32,30 +32,14 @@ The `build:data` command automatically fetches the latest source files from [git
 
 ## IDE Configuration
 
-### Option A: Remote Server (Docker)
+### Option A: Remote Server
 
-Deploy as an online MCP service — no local Node.js or data build needed.
-
-```bash
-# Clone and start
-git clone https://github.com/hnrobert/modsharp-public-mcp.git
-cd modsharp-public-mcp
-docker compose up -d
-```
-
-Or pull directly from GHCR:
-
-```bash
-docker pull ghcr.io/hnrobert/modsharp-public-mcp:latest
-docker run -d -p 3045:3045 -e MCP_TRANSPORT=http ghcr.io/hnrobert/modsharp-public-mcp:latest
-```
-
-The server exposes two transport endpoints:
+A public instance is available at `modsharp.hnrobert.space`.
 
 | Endpoint | Protocol | Clients |
 |----------|----------|---------|
-| `http://your-host:3045/sse` | SSE (2024-11-05) | Cursor, older clients |
-| `http://your-host:3045/mcp` | Streamable HTTP (2025-03-26) | Claude Code, newer clients |
+| `https://modsharp.hnrobert.space/sse` | SSE (2024-11-05) | Cursor, older clients |
+| `https://modsharp.hnrobert.space/mcp` | Streamable HTTP (2025-03-26) | Claude Code, newer clients |
 
 #### Claude Code
 
@@ -65,7 +49,7 @@ Add to `.mcp.json`:
 {
   "mcpServers": {
     "modsharp": {
-      "url": "http://your-host:3045/mcp"
+      "url": "https://modsharp.hnrobert.space/mcp"
     }
   }
 }
@@ -79,10 +63,17 @@ Add to `.cursor/mcp.json`:
 {
   "mcpServers": {
     "modsharp": {
-      "url": "http://your-host:3045/sse"
+      "url": "https://modsharp.hnrobert.space/sse"
     }
   }
 }
+```
+
+#### Self-hosting
+
+```bash
+docker pull ghcr.io/hnrobert/modsharp-public-mcp:latest
+docker run -d -p 3045:3045 -e MCP_TRANSPORT=http ghcr.io/hnrobert/modsharp-public-mcp:latest
 ```
 
 ### Option B: Local Docker (stdio)

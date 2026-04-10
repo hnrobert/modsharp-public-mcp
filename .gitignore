@@ -137,5 +137,7 @@ dist
 
 **/settings.local.json
 **/skills/
-data/generated
-data/fetched
+
+data/generated/**
+data/fetched/**
+!**/.gitkeep

@@ -17,10 +17,12 @@
         "modelcontextprotocol",
         "modsharp",
         "Nuxt",
+        "onsessioninitialized",
         "paramref",
         "pipefail",
         "seealso",
         "stylelintcache",
+        "Vars",
         "vitepress",
         "vuepress",
         "wscript"

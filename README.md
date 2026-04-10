@@ -32,22 +32,30 @@ The `build:data` command automatically fetches the latest source files from [git
 
 ## IDE Configuration
 
-### Claude Code
+### Option A: Remote Server
 
-Add to `.mcp.json` in your project root:
+A public instance is available at `modsharp.hnrobert.space`.
+
+| Endpoint | Protocol | Clients |
+|----------|----------|---------|
+| `https://modsharp.hnrobert.space/sse` | SSE (2024-11-05) | Cursor, older clients |
+| `https://modsharp.hnrobert.space/mcp` | Streamable HTTP (2025-03-26) | Claude Code, newer clients |
+
+#### Claude Code
+
+Add to `.mcp.json`:
 
 ```json
 {
   "mcpServers": {
     "modsharp": {
-      "command": "node",
-      "args": ["/path/to/modsharp-public-mcp/dist/index.js"]
+      "url": "https://modsharp.hnrobert.space/mcp"
     }
   }
 }
 ```
 
-### Cursor
+#### Cursor
 
 Add to `.cursor/mcp.json`:
 
@@ -55,38 +63,75 @@ Add to `.cursor/mcp.json`:
 {
   "mcpServers": {
     "modsharp": {
-      "command": "node",
-      "args": ["/path/to/modsharp-public-mcp/dist/index.js"]
+      "url": "https://modsharp.hnrobert.space/sse"
     }
   }
 }
 ```
 
+#### Self-hosting
+
+```bash
+docker pull ghcr.io/hnrobert/modsharp-public-mcp:latest
+docker run -d -p 3045:3045 -e MCP_TRANSPORT=http ghcr.io/hnrobert/modsharp-public-mcp:latest
+```
+
+### Option B: Local Docker (stdio)
+
+```bash
+docker pull ghcr.io/hnrobert/modsharp-public-mcp:latest
+```
+
+Use in IDE config:
+
+```json
+{
+  "mcpServers": {
+    "modsharp": {
+      "command": "docker",
+      "args": ["run", "--rm", "-i", "ghcr.io/hnrobert/modsharp-public-mcp:latest"]
+    }
+  }
+}
+```
+
+### Option C: Local Node.js
+
+```bash
+pnpm install && pnpm build:data && pnpm build
+```
+
+Then use `"command": "node", "args": ["/path/to/modsharp-public-mcp/dist/index.js"]` in the config above.
+
 ## MCP Tools
 
 | Tool | Description |
 |------|-------------|
-| `search_docs` | Full-text search across all documentation, API types, and examples |
-| `search_api` | Search API types and members by keyword |
-| `get_api_type` | Get full details of a specific API type |
-| `list_namespace` | Browse the namespace/type hierarchy |
+| `search_docs` | Full-text search across all documentation, API types, examples, and CS2 schemas |
+| `search_api` | Search ModSharp API types and members by keyword |
+| `get_api_type` | Get full details of a specific ModSharp API type |
+| `list_namespace` | Browse the ModSharp namespace/type hierarchy |
 | `get_guide` | Retrieve a documentation article |
 | `get_code_example` | Get a code example by ID |
+| `search_schemas` | Search CS2 engine schema classes (CBaseEntity, C_CSPlayerPawn, etc.) |
+| `get_schema_type` | Get full details of a CS2 schema class (fields, network vars) |
 
 ## MCP Resources
 
-- `modsharp://api/{namespace}/{typeName}` - API type info (JSON)
+- `modsharp://api/{namespace}/{typeName}` - ModSharp API type info (JSON)
 - `modsharp://docs/{locale}/{path}` - Documentation articles (Markdown)
 - `modsharp://examples/{id}` - Code examples (plain text)
+- `modsharp://schema/{category}/{className}` - CS2 engine schema classes (JSON)
 - `modsharp://namespaces` - Full namespace hierarchy (JSON)
 - `modsharp://toc` - Documentation table of contents (JSON)
 
-## Data Stats
+## Data Stats (as of 2026-04-10)
 
-- **326** parsed C# types with **3,772** members
+- **326** ModSharp API types with **3,772** members
+- **2,536** CS2/Source2 engine schema classes across **44** categories with **3,141** network fields
 - **44** English + **44** Chinese documentation articles
 - **34** code examples
-- **6,699** search index tokens
+- **23,153** search index tokens
 
 ## Development
 
@@ -103,25 +148,30 @@ pnpm typecheck    # Type check
 
 ```mermaid
 graph LR
-  subgraph build["Build-time (pnpm build:data)"]
-    A[GitHub API<br/>Kxnrl/modsharp-public] -->|fetch| B[data/fetched/<br/>local cache]
-    B -->|parse| C[data/generated/<br/>JSON data]
+  subgraph build["Build-time (docker build / pnpm build:data)"]
+    A[GitHub: Kxnrl/modsharp-public<br/>ModSharp C# SDK + Docs] -->|fetch| B[data/fetched/<br/>source cache]
+    F[GitHub: SteamTracking/GameTracking-CS2<br/>CS2 Engine Schemas] -->|fetch| B
+    B -->|parse + index| C[data/generated/<br/>JSON data]
   end
-  subgraph runtime["Runtime (pnpm start)"]
-    C -->|load| D[MCP server<br/>stdio transport]
-    D --> E[IDE Agent<br/>Claude Code / Cursor]
+  subgraph runtime["Runtime (MCP_TRANSPORT=stdio | http)"]
+    C -->|load| D[MCP server]
+    D -->|stdio| E[Local IDE]
+    D -->|HTTP SSE / Streamable| G[Remote IDEs]
   end
 ```
 
-**Build-time** (no network at runtime):
+**Build-time** (baked into Docker image, no network at runtime):
 
-1. `pnpm fetch` — Downloads source files from GitHub via API, caches by file size
-2. Parse — Extracts API types from C# sources and articles from markdown
+1. Fetch — Downloads source files from GitHub (modsharp-public + GameTracking-CS2), caches locally
+2. Parse — Extracts API types from C# sources, articles from markdown, CS2 schemas from engine headers
 3. Index — Builds a token-based search index
 
-**Runtime** (offline, no network needed):
+Only `data/generated/` (final JSON) enters the Docker image.
 
-- MCP server loads generated JSON into memory, serves via stdio transport
+**Runtime** (fully offline, no network needed):
+
+- `MCP_TRANSPORT=stdio` (default) — local IDE via stdin/stdout
+- `MCP_TRANSPORT=http` — remote IDEs via HTTP (`/sse` + `/mcp` endpoints)
 
 <!-- ## License -->
 

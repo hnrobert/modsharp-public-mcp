@@ -1,12 +1,21 @@
-import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { loadData } from "./data/loader.js";
 import { createServer } from "./server.js";
+import { startStdio } from "./transports/stdio.js";
+import { startHttp } from "./transports/http.js";
 
-async function main() {
+const TRANSPORT = process.env.MCP_TRANSPORT || "stdio";
+
+async function main(): Promise<void> {
   const data = await loadData();
-  const server = createServer(data);
-  const transport = new StdioServerTransport();
-  await server.connect(transport);
+
+  if (TRANSPORT === "http" || TRANSPORT === "all") {
+    startHttp(data);
+  }
+
+  if (TRANSPORT === "stdio" || TRANSPORT === "all") {
+    const server = createServer(data);
+    await startStdio(server);
+  }
 }
 
 main().catch((err) => {

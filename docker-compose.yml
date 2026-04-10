@@ -1,0 +1,9 @@
+services:
+  modsharp-public-mcp:
+    image: ghcr.io/hnrobert/modsharp-public-mcp:latest
+    environment:
+      - MCP_TRANSPORT=http
+      - PORT=3045
+    ports:
+      - "3045:3045"
+    restart: unless-stopped

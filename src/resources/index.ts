@@ -58,4 +58,25 @@ export function registerAllResources(server: McpServer, data: LoadedData): void 
       ],
     })
   );
+
+  // CS2 Schema classes
+  for (const [uid, schema] of data.schemas) {
+    server.registerResource(
+      `schema-${uid}`,
+      `modsharp://schema/${uid}`,
+      {
+        description: `CS2 schema: ${schema.name}${schema.parent ? ` extends ${schema.parent}` : ""} (${schema.networkVars.length} net vars)`,
+        mimeType: "application/json",
+      },
+      async () => ({
+        contents: [
+          {
+            uri: `modsharp://schema/${uid}`,
+            mimeType: "application/json",
+            text: JSON.stringify(schema, null, 2),
+          },
+        ],
+      })
+    );
+  }
 }

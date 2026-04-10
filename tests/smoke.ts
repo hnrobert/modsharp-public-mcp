@@ -67,6 +67,22 @@ async function main() {
   const guideText = (guideResult.content as Array<{ text: string }>)[0]?.text || "";
   console.log(guideText.slice(0, 300));
 
+  // Test search_schemas
+  const schemaSearchResult = await client.callTool({
+    name: "search_schemas",
+    arguments: { query: "CBaseEntity", category: "server", limit: 3 },
+  });
+  console.log("\nsearch_schemas('CBaseEntity'):");
+  console.log((schemaSearchResult.content as Array<{ text: string }>)[0]?.text?.slice(0, 400));
+
+  // Test get_schema_type
+  const schemaTypeResult = await client.callTool({
+    name: "get_schema_type",
+    arguments: { uid: "server/CBaseEntity" },
+  });
+  console.log("\nget_schema_type('server/CBaseEntity'):");
+  console.log((schemaTypeResult.content as Array<{ text: string }>)[0]?.text?.slice(0, 400));
+
   // Test list resources
   const resources = await client.listResources();
   console.log(`\nResources: ${resources.resources.length} registered`);

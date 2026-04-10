@@ -178,8 +178,17 @@ jobs:
             type=raw,value=${{ steps.resolve.outputs.tag }},enable=${{ steps.resolve.outputs.has_semver == 'false' && steps.resolve.outputs.has_tag == 'true' }}
             type=raw,value=${{ steps.resolve.outputs.sha }},enable=${{ steps.resolve.outputs.is_main == 'false' && steps.resolve.outputs.is_develop == 'false' && steps.resolve.outputs.has_tag == 'false' }}
 
+      - name: Determine platforms
+        id: platforms
+        run: |
+          if [[ "${{ steps.resolve.outputs.is_main }}" == "true" ]]; then
+            echo "list=linux/amd64,linux/arm64,linux/arm/v7" >> "$GITHUB_OUTPUT"
+          else
+            echo "list=linux/amd64" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Build and push
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           provenance: false
           sbom: false
@@ -189,4 +198,4 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          platforms: linux/amd64,linux/arm64
+          platforms: ${{ steps.platforms.outputs.list }}

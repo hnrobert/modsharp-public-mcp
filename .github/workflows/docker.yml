@@ -69,6 +69,26 @@ jobs:
           git tag "$TAG"
           git push origin "refs/tags/$TAG"
 
+      # ── Sync develop after release on main ────────────────
+      - name: Sync develop with main
+        if: steps.prep.outputs.is_semver == 'true' && github.ref == 'refs/heads/main'
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin develop
+          if ! git show-ref --verify --quiet refs/remotes/origin/develop; then
+            echo "::notice::develop branch does not exist, skipping sync."
+            exit 0
+          fi
+          git checkout develop
+          if [ "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)" ]; then
+            echo "::notice::develop is already up to date."
+            exit 0
+          fi
+          git merge --ff-only origin/main
+          git push origin develop
+          echo "::notice::develop synced with main."
+
       - name: If dispatch with tag, checkout it
         if: github.event_name == 'workflow_dispatch' && steps.prep.outputs.has_tag == 'true'
         run: |

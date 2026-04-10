@@ -3,7 +3,6 @@ import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { createMcpExpressApp } from "@modelcontextprotocol/sdk/server/express.js";
 import { isInitializeRequest } from "@modelcontextprotocol/sdk/types.js";
-import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { LoadedData } from "../types.js";
 import { createServer } from "../server.js";
 
@@ -12,7 +11,7 @@ type Transport = SSEServerTransport | StreamableHTTPServerTransport;
 const PORT = parseInt(process.env.PORT || "3045", 10);
 
 export function startHttp(data: LoadedData): void {
-  const app = createMcpExpressApp();
+  const app = createMcpExpressApp({ host: "0.0.0.0" });
   const transports = new Map<string, Transport>();
 
   // ── SSE (protocol 2024-11-05) — Cursor, older clients ────────

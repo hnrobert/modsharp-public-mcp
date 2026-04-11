@@ -28,6 +28,10 @@ export interface ApiTypeInfo {
   deprecated?: string;
   isStatic: boolean;
   typeParameters?: string[];
+  /** For Shared interfaces: which Core classes implement this */
+  implementations?: Array<{ uid: string; name: string }>;
+  /** For Core classes: which Shared interfaces this implements */
+  implementsTypes?: Array<{ uid: string; name: string }>;
 }
 
 // === Member Info ===

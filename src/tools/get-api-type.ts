@@ -69,6 +69,8 @@ function formatType(
     deprecated: typeInfo.deprecated,
     isStatic: typeInfo.isStatic,
     typeParameters: typeInfo.typeParameters,
+    implementations: typeInfo.implementations,
+    implementsTypes: typeInfo.implementsTypes,
   };
 
   if (includeMembers) {

@@ -26,7 +26,7 @@ const MODSHARP: SourceRepo = {
   owner: 'Kxnrl',
   repo: 'modsharp-public',
   branch: 'master',
-  prefixes: ['Sharp.Shared/', 'docfx/docs/'],
+  prefixes: ['Sharp.Shared/', 'Sharp.Core/', 'docfx/docs/'],
   extensions: new Set(['.cs', '.md', '.yml', '.yaml', '.xml']),
   extraFiles: ['docfx/toc.yml'],
   remap(gitPath: string): string {

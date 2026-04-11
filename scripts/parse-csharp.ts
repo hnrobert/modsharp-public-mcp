@@ -8,7 +8,10 @@ import type {
 } from '../src/types.js';
 
 const PROJECT_ROOT = resolve(import.meta.dirname, '..');
-const SOURCE_DIR = resolve(PROJECT_ROOT, 'data/fetched/Sharp.Shared');
+const SOURCE_DIRS = [
+  resolve(PROJECT_ROOT, 'data/fetched/Sharp.Shared'),
+  resolve(PROJECT_ROOT, 'data/fetched/Sharp.Core'),
+];
 const OUTPUT_DIR = resolve(PROJECT_ROOT, 'data/generated');
 
 async function findCsFiles(dir: string): Promise<string[]> {
@@ -231,8 +234,9 @@ function parseCsFile(
     let inheritanceList: string[] = [];
     let implementsList: string[] = [];
     if (inheritance) {
-      const parts = inheritance.split(',').map((s) => s.trim());
+      const parts = inheritance.split(',').map((s) => s.trim().replace(/[;{]/g, '').trim());
       for (const part of parts) {
+        if (!part) continue;
         if (kind === 'interface' || part.startsWith('I')) {
           implementsList.push(part);
         } else {
@@ -492,10 +496,17 @@ function parseMembers(
 }
 
 async function main() {
-  console.log('Parsing C# source files from:', SOURCE_DIR);
+  console.log('Parsing C# source files...');
 
-  const files = await findCsFiles(SOURCE_DIR);
-  console.log(`Found ${files.length} .cs files`);
+  // Collect files from all source directories
+  const files: string[] = [];
+  for (const dir of SOURCE_DIRS) {
+    const dirFiles = await findCsFiles(dir);
+    const dirName = dir.split('/').pop();
+    console.log(`  ${dirName}: ${dirFiles.length} .cs files`);
+    files.push(...dirFiles);
+  }
+  console.log(`Total: ${files.length} .cs files`);
 
   const allTypes: Record<string, ApiTypeInfo> = {};
   const allNamespaces: Record<string, NamespaceInfo> = {};
@@ -539,14 +550,84 @@ async function main() {
     }
   }
 
-  // Ensure root namespace exists
-  if (!allNamespaces['Sharp.Shared']) {
-    allNamespaces['Sharp.Shared'] = {
-      uid: 'Sharp.Shared',
-      name: 'Shared',
-      childNamespaces: [],
-      types: [],
-    };
+  // Ensure root namespaces exist for each source directory
+  for (const root of ['Sharp.Shared', 'Sharp.Core']) {
+    if (!allNamespaces[root]) {
+      allNamespaces[root] = {
+        uid: root,
+        name: root.split('.').pop()!,
+        childNamespaces: [],
+        types: [],
+      };
+    }
+  }
+
+  // ── Cross-reference: link Shared interfaces ↔ Core implementations ──
+  const nameToUid = new Map<string, string>();
+  for (const type of Object.values(allTypes)) {
+    nameToUid.set(type.name, type.uid);
+  }
+
+  // Resolve an interface name to all Sharp.Shared interfaces it extends (recursively)
+  function resolveSharedInterfaces(
+    ifaceName: string,
+    visited: Set<string>,
+  ): Array<{ uid: string; name: string }> {
+    if (visited.has(ifaceName)) return [];
+    visited.add(ifaceName);
+
+    const uid = nameToUid.get(ifaceName) ?? ifaceName;
+    const type = allTypes[uid];
+    if (!type) return [];
+
+    const results: Array<{ uid: string; name: string }> = [];
+    if (type.namespace.startsWith('Sharp.Shared')) {
+      results.push({ uid: type.uid, name: type.name });
+    }
+
+    // Also resolve parent interfaces
+    if (type.implements) {
+      for (const parent of type.implements) {
+        results.push(...resolveSharedInterfaces(parent, visited));
+      }
+    }
+
+    return results;
+  }
+
+  const coreTypes = Object.values(allTypes).filter((t) =>
+    t.namespace.startsWith('Sharp.Core'),
+  );
+
+  for (const coreType of coreTypes) {
+    if (!coreType.implements || coreType.implements.length === 0) continue;
+
+    const linkedInterfaces: Array<{ uid: string; name: string }> = [];
+    for (const iface of coreType.implements) {
+      const resolved = resolveSharedInterfaces(iface, new Set());
+      for (const r of resolved) {
+        if (!linkedInterfaces.some((l) => l.uid === r.uid)) {
+          linkedInterfaces.push(r);
+        }
+      }
+    }
+
+    if (linkedInterfaces.length > 0) {
+      coreType.implementsTypes = linkedInterfaces;
+
+      // Add reverse links on Shared interfaces
+      for (const linked of linkedInterfaces) {
+        const sharedType = allTypes[linked.uid];
+        if (!sharedType) continue;
+        if (!sharedType.implementations) sharedType.implementations = [];
+        if (!sharedType.implementations.some((i) => i.uid === coreType.uid)) {
+          sharedType.implementations.push({
+            uid: coreType.uid,
+            name: coreType.name,
+          });
+        }
+      }
+    }
   }
 
   // Ensure output dir

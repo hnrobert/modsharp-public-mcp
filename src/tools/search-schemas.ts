@@ -1,32 +1,39 @@
-import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { z } from "zod";
-import type { LoadedData } from "../types.js";
-import { tokenize } from "../search/index.js";
+import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { z } from 'zod';
+import type { LoadedData } from '../types.js';
+import { tokenize } from '../search/index.js';
 
-export function registerSearchSchemasTool(server: McpServer, data: LoadedData): void {
+export function registerSearchSchemasTool(
+  server: McpServer,
+  data: LoadedData,
+): void {
   server.registerTool(
-    "search_schemas",
+    'search_schemas',
     {
       description:
-        "Search CS2 engine schema classes (CBaseEntity, C_CSPlayerPawn, etc.) from GameTracking-CS2. " +
-        "Matches class names, parent classes, and field names. Returns network fields and local fields.",
+        'Search CS2 engine schema classes (CBaseEntity, C_CSPlayerPawn, etc.) from GameTracking-CS2. ' +
+        'Matches class names, parent classes, and field names. Returns network fields and local fields.',
       inputSchema: {
         query: z
           .string()
           .min(1)
           .max(200)
-          .describe("Search term (class name like 'CBaseEntity', field name like 'm_iHealth')"),
+          .describe(
+            "Search term (class name like 'CBaseEntity', field name like 'm_iHealth')",
+          ),
         category: z
           .string()
-          .default("all")
-          .describe("Schema category to filter by (e.g. 'server', 'client', 'particles', 'animlib') or 'all'"),
+          .default('all')
+          .describe(
+            "Schema category to filter by (e.g. 'server', 'client', 'particles', 'animlib') or 'all'",
+          ),
         limit: z
           .number()
           .int()
           .min(1)
           .max(50)
           .default(20)
-          .describe("Maximum results"),
+          .describe('Maximum results'),
       },
       annotations: {
         readOnlyHint: true,
@@ -48,7 +55,8 @@ export function registerSearchSchemasTool(server: McpServer, data: LoadedData): 
       }> = [];
 
       for (const [uid, schema] of data.schemas) {
-        if (category && category !== "all" && schema.category !== category) continue;
+        if (category && category !== 'all' && schema.category !== category)
+          continue;
 
         let score = 0;
         const matchedFields: string[] = [];
@@ -59,7 +67,8 @@ export function registerSearchSchemasTool(server: McpServer, data: LoadedData): 
         else if (nameLower.includes(queryLower)) score += 5;
 
         // Parent match
-        if (schema.parent && schema.parent.toLowerCase().includes(queryLower)) score += 3;
+        if (schema.parent && schema.parent.toLowerCase().includes(queryLower))
+          score += 3;
 
         // Token match on class name
         const classTokens = new Set(tokenize(schema.name));
@@ -98,15 +107,19 @@ export function registerSearchSchemasTool(server: McpServer, data: LoadedData): 
       return {
         content: [
           {
-            type: "text" as const,
+            type: 'text' as const,
             text: JSON.stringify(
-              { total: results.length, results: limited, hasMore: results.length > (limit ?? 20) },
+              {
+                total: results.length,
+                results: limited,
+                hasMore: results.length > (limit ?? 20),
+              },
               null,
-              2
+              2,
             ),
           },
         ],
       };
-    }
+    },
   );
 }

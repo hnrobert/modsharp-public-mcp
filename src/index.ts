@@ -1,24 +1,24 @@
-import { loadData } from "./data/loader.js";
-import { createServer } from "./server.js";
-import { startStdio } from "./transports/stdio.js";
-import { startHttp } from "./transports/http.js";
+import { loadData } from './data/loader.js';
+import { createServer } from './server.js';
+import { startStdio } from './transports/stdio.js';
+import { startHttp } from './transports/http.js';
 
-const TRANSPORT = process.env.MCP_TRANSPORT || "stdio";
+const TRANSPORT = process.env.MCP_TRANSPORT || 'stdio';
 
 async function main(): Promise<void> {
   const data = await loadData();
 
-  if (TRANSPORT === "http" || TRANSPORT === "all") {
+  if (TRANSPORT === 'http' || TRANSPORT === 'all') {
     startHttp(data);
   }
 
-  if (TRANSPORT === "stdio" || TRANSPORT === "all") {
+  if (TRANSPORT === 'stdio' || TRANSPORT === 'all') {
     const server = createServer(data);
     await startStdio(server);
   }
 }
 
 main().catch((err) => {
-  console.error("Fatal error starting ModSharp MCP server:", err);
+  console.error('Fatal error starting ModSharp MCP server:', err);
   process.exit(1);
 });

@@ -1,19 +1,22 @@
-import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { z } from "zod";
-import type { LoadedData } from "../types.js";
+import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { z } from 'zod';
+import type { LoadedData } from '../types.js';
 
-export function registerGetSchemaTypeTool(server: McpServer, data: LoadedData): void {
+export function registerGetSchemaTypeTool(
+  server: McpServer,
+  data: LoadedData,
+): void {
   server.registerTool(
-    "get_schema_type",
+    'get_schema_type',
     {
       description:
-        "Get full details of a CS2 engine schema class (fields, network vars, parent class). " +
-        "Use search_schemas to discover available classes.",
+        'Get full details of a CS2 engine schema class (fields, network vars, parent class). ' +
+        'Use search_schemas to discover available classes.',
       inputSchema: {
         uid: z
           .string()
           .describe(
-            "Schema class UID (e.g. 'server/CBaseEntity', 'client/C_CSPlayerPawn')"
+            "Schema class UID (e.g. 'server/CBaseEntity', 'client/C_CSPlayerPawn')",
           ),
       },
       annotations: {
@@ -51,7 +54,7 @@ export function registerGetSchemaTypeTool(server: McpServer, data: LoadedData): 
         return {
           content: [
             {
-              type: "text" as const,
+              type: 'text' as const,
               text: `Schema class not found: ${uid}. Use search_schemas to find the correct UID.`,
             },
           ],
@@ -62,11 +65,11 @@ export function registerGetSchemaTypeTool(server: McpServer, data: LoadedData): 
       return {
         content: [
           {
-            type: "text" as const,
+            type: 'text' as const,
             text: JSON.stringify(schema, null, 2),
           },
         ],
       };
-    }
+    },
   );
 }

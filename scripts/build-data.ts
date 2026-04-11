@@ -1,14 +1,14 @@
-import { execFileSync } from "node:child_process";
-import { resolve } from "node:path";
+import { execFileSync } from 'node:child_process';
+import { resolve } from 'node:path';
 
-const ROOT = resolve(import.meta.dirname, "..");
+const ROOT = resolve(import.meta.dirname, '..');
 
 function run(script: string, label: string): void {
   console.log(`\n=== ${label} ===`);
   try {
-    execFileSync("tsx", [resolve(ROOT, script)], {
+    execFileSync('tsx', [resolve(ROOT, script)], {
       cwd: ROOT,
-      stdio: "inherit",
+      stdio: 'inherit',
       timeout: 120_000,
     });
   } catch (err) {
@@ -17,12 +17,12 @@ function run(script: string, label: string): void {
   }
 }
 
-console.log("Building ModSharp MCP data...");
-console.log("Root:", ROOT);
+console.log('Building ModSharp MCP data...');
+console.log('Root:', ROOT);
 
-run("scripts/parse-csharp.ts", "Step 1: Parse C# sources");
-run("scripts/parse-markdown.ts", "Step 2: Parse markdown docs & examples");
-run("scripts/parse-schemas.ts", "Step 3: Parse CS2 schemas");
-run("scripts/generate-indices.ts", "Step 4: Generate search index");
+run('scripts/parse-csharp.ts', 'Step 1: Parse C# sources');
+run('scripts/parse-markdown.ts', 'Step 2: Parse markdown docs & examples');
+run('scripts/parse-schemas.ts', 'Step 3: Parse CS2 schemas');
+run('scripts/generate-indices.ts', 'Step 4: Generate search index');
 
-console.log("\n=== Build complete! ===");
+console.log('\n=== Build complete! ===');

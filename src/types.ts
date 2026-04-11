@@ -1,11 +1,16 @@
 // === Type kinds ===
-export type TypeKind = "interface" | "class" | "struct" | "enum" | "delegate";
+export type TypeKind = 'interface' | 'class' | 'struct' | 'enum' | 'delegate';
 
 // === Member kinds ===
-export type MemberKind = "method" | "property" | "field" | "event" | "constructor";
+export type MemberKind =
+  | 'method'
+  | 'property'
+  | 'field'
+  | 'event'
+  | 'constructor';
 
 // === Locale ===
-export type Locale = "en" | "cn";
+export type Locale = 'en' | 'cn';
 
 // === API Type Info ===
 export interface ApiTypeInfo {
@@ -97,11 +102,11 @@ export interface TocNode {
 
 // === CS2 Schema Types ===
 export interface SchemaClass {
-  uid: string;              // "server/CBaseEntity" or "client/C_CSPlayerPawn"
-  name: string;             // "CBaseEntity"
-  parent?: string;          // "CEntityInstance"
-  category: string;         // "server", "client", "entity2", etc.
-  sourceFile: string;       // "server/CBaseEntity.h"
+  uid: string; // "server/CBaseEntity" or "client/C_CSPlayerPawn"
+  name: string; // "CBaseEntity"
+  parent?: string; // "CEntityInstance"
+  category: string; // "server", "client", "entity2", etc.
+  sourceFile: string; // "server/CBaseEntity.h"
   networkVars: SchemaField[];
   localFields: SchemaField[];
   kv3Defaults?: Record<string, string>;
@@ -133,7 +138,7 @@ export interface LoadedData {
 // === Tool result types ===
 export interface SearchResult {
   id: string;
-  type: "doc" | "api-type" | "example" | "schema";
+  type: 'doc' | 'api-type' | 'example' | 'schema';
   title: string;
   locale?: Locale;
   snippet: string;
@@ -154,7 +159,11 @@ export interface SearchApiResult {
     kind: TypeKind;
     namespace: string;
     summary?: string;
-    matchedMembers?: Array<{ name: string; kind: MemberKind; summary?: string }>;
+    matchedMembers?: Array<{
+      name: string;
+      kind: MemberKind;
+      summary?: string;
+    }>;
     relevanceScore: number;
   }>;
   hasMore: boolean;

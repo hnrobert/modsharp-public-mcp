@@ -1,13 +1,13 @@
-import { resolve, dirname } from "node:path";
-import { fileURLToPath } from "node:url";
+import { resolve, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 // In dev: __dirname is src/ -> ../  (project root)
 // In dist: __dirname is dist/ -> ../  (project root)
-export const PROJECT_ROOT = resolve(__dirname, "..");
+export const PROJECT_ROOT = resolve(__dirname, '..');
 
-export const SERVER_NAME = "modsharp-docs";
-export const SERVER_VERSION = "1.0.0";
+export const SERVER_NAME = 'modsharp-docs';
+export const SERVER_VERSION = '1.0.0';
 
 export const SERVER_INSTRUCTIONS = `ModSharp is a Counter-Strike 2 modding framework. This MCP server provides access to its API documentation and guides.
 
@@ -27,9 +27,9 @@ export const DEFAULT_SEARCH_LIMIT = 10;
 
 export const PATHS = {
   // Fetched source data (populated by fetch scripts or manually)
-  fetchedSharpShared: resolve(PROJECT_ROOT, "data/fetched/Sharp.Shared"),
-  fetchedDocs: resolve(PROJECT_ROOT, "data/fetched/docs"),
-  fetchedRootToc: resolve(PROJECT_ROOT, "data/fetched/toc.yml"),
+  fetchedSharpShared: resolve(PROJECT_ROOT, 'data/fetched/Sharp.Shared'),
+  fetchedDocs: resolve(PROJECT_ROOT, 'data/fetched/docs'),
+  fetchedRootToc: resolve(PROJECT_ROOT, 'data/fetched/toc.yml'),
   // Generated data (output of build:data)
-  generated: resolve(PROJECT_ROOT, "data/generated"),
+  generated: resolve(PROJECT_ROOT, 'data/generated'),
 } as const;

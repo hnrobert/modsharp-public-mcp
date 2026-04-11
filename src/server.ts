@@ -1,8 +1,12 @@
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { SERVER_NAME, SERVER_VERSION, SERVER_INSTRUCTIONS } from "./constants.js";
-import type { LoadedData } from "./types.js";
-import { registerAllTools } from "./tools/index.js";
-import { registerAllResources } from "./resources/index.js";
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import {
+  SERVER_NAME,
+  SERVER_VERSION,
+  SERVER_INSTRUCTIONS,
+} from './constants.js';
+import type { LoadedData } from './types.js';
+import { registerAllTools } from './tools/index.js';
+import { registerAllResources } from './resources/index.js';
 
 export function createServer(data: LoadedData): McpServer {
   const server = new McpServer({

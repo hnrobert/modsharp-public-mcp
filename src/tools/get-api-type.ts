@@ -1,24 +1,27 @@
-import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { z } from "zod";
-import type { LoadedData } from "../types.js";
+import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { z } from 'zod';
+import type { LoadedData } from '../types.js';
 
-export function registerGetApiTypeTool(server: McpServer, data: LoadedData): void {
+export function registerGetApiTypeTool(
+  server: McpServer,
+  data: LoadedData,
+): void {
   server.registerTool(
-    "get_api_type",
+    'get_api_type',
     {
       description:
-        "Get full details of a specific ModSharp API type (interface, class, struct, enum). " +
-        "Returns members, summary, inheritance, and syntax. Use search_api or list_namespace to discover UIDs.",
+        'Get full details of a specific ModSharp API type (interface, class, struct, enum). ' +
+        'Returns members, summary, inheritance, and syntax. Use search_api or list_namespace to discover UIDs.',
       inputSchema: {
         uid: z
           .string()
           .describe(
-            "Full UID of the type (e.g. 'Sharp.Shared.Managers.IHookManager', 'Sharp.Shared.Enums.CStrikeTeam')"
+            "Full UID of the type (e.g. 'Sharp.Shared.Managers.IHookManager', 'Sharp.Shared.Enums.CStrikeTeam')",
           ),
         includeMembers: z
           .boolean()
           .default(true)
-          .describe("Include member details. Set false for a summary view."),
+          .describe('Include member details. Set false for a summary view.'),
       },
       annotations: {
         readOnlyHint: true,
@@ -38,7 +41,7 @@ export function registerGetApiTypeTool(server: McpServer, data: LoadedData): voi
         return {
           content: [
             {
-              type: "text" as const,
+              type: 'text' as const,
               text: `Type not found: ${uid}. Use search_api to find the correct UID.`,
             },
           ],
@@ -46,11 +49,14 @@ export function registerGetApiTypeTool(server: McpServer, data: LoadedData): voi
         };
       }
       return formatType(typeInfo, includeMembers ?? true);
-    }
+    },
   );
 }
 
-function formatType(typeInfo: LoadedData["types"] extends Map<string, infer V> ? V : never, includeMembers: boolean) {
+function formatType(
+  typeInfo: LoadedData['types'] extends Map<string, infer V> ? V : never,
+  includeMembers: boolean,
+) {
   const result: Record<string, unknown> = {
     uid: typeInfo.uid,
     name: typeInfo.name,
@@ -86,6 +92,6 @@ function formatType(typeInfo: LoadedData["types"] extends Map<string, infer V> ?
   }
 
   return {
-    content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }],
+    content: [{ type: 'text' as const, text: JSON.stringify(result, null, 2) }],
   };
 }

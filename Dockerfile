@@ -2,10 +2,15 @@ FROM node:20-slim AS base
 RUN corepack enable
 WORKDIR /app
 
-# ---- Dependencies ----
+# ---- Dependencies (all, for build) ----
 FROM base AS deps
 COPY package.json pnpm-lock.yaml ./
-RUN pnpm install --frozen-lockfile --prod=false
+RUN pnpm install --frozen-lockfile
+
+# ---- Production dependencies only ----
+FROM base AS prod-deps
+COPY package.json pnpm-lock.yaml ./
+RUN pnpm install --frozen-lockfile --prod
 
 # ---- Fetch & Build data ----
 FROM deps AS data
@@ -23,9 +28,16 @@ RUN pnpm build
 # ---- Production ----
 FROM node:20-slim AS release
 WORKDIR /app
+
+# Layer 1: production deps (changes only when package.json changes)
+COPY --from=prod-deps /app/node_modules/ node_modules/
+
+# Layer 2: generated data (changes only when data updates)
+COPY --from=data /app/data/generated/ data/generated/
+
+# Layer 3: server bundle (changes on every code update, ~100KB)
 COPY --from=build /app/dist/ dist/
-COPY --from=build /app/data/generated/ data/generated/
-COPY --from=build /app/node_modules/ node_modules/
+
 COPY package.json ./
 
 ENTRYPOINT ["node", "dist/index.js"]

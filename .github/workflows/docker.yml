@@ -57,9 +57,16 @@ jobs:
             echo "version=$VERSION" >> "$GITHUB_OUTPUT"
             echo "is_semver=true"   >> "$GITHUB_OUTPUT"
             node -e "const fs=require('fs');const p='package.json';const j=JSON.parse(fs.readFileSync(p,'utf8'));j.version='$VERSION';fs.writeFileSync(p, JSON.stringify(j,null,2)+'\n');"
+
+            # Build data & update README stats
+            corepack enable
+            pnpm install --frozen-lockfile
+            pnpm build:data
+            bash scripts/update-readme-stats.sh "$TAG"
+
             git config user.name  "github-actions[bot]"
             git config user.email "github-actions[bot]@users.noreply.github.com"
-            git add package.json
+            git add package.json README.md
             git commit -m "chore(release): $TAG"
             git push origin "HEAD:${GITHUB_REF_NAME}"
           else

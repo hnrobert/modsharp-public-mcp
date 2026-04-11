@@ -1,7 +1,10 @@
-import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import type { LoadedData } from "../types.js";
+import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import type { LoadedData } from '../types.js';
 
-export function registerDocResources(server: McpServer, data: LoadedData): void {
+export function registerDocResources(
+  server: McpServer,
+  data: LoadedData,
+): void {
   // Register documentation articles
   const allDocs = [...data.docsEn, ...data.docsCn];
   for (const doc of allDocs) {
@@ -10,18 +13,18 @@ export function registerDocResources(server: McpServer, data: LoadedData): void 
       `doc-${doc.id}`,
       uri,
       {
-        description: `${doc.locale === "cn" ? "Chinese" : "English"} doc: ${doc.title}`,
-        mimeType: "text/markdown",
+        description: `${doc.locale === 'cn' ? 'Chinese' : 'English'} doc: ${doc.title}`,
+        mimeType: 'text/markdown',
       },
       async () => ({
         contents: [
           {
             uri,
-            mimeType: "text/markdown",
+            mimeType: 'text/markdown',
             text: doc.content,
           },
         ],
-      })
+      }),
     );
   }
 
@@ -33,17 +36,17 @@ export function registerDocResources(server: McpServer, data: LoadedData): void 
       uri,
       {
         description: `Code example: ${example.title}`,
-        mimeType: "text/plain",
+        mimeType: 'text/plain',
       },
       async () => ({
         contents: [
           {
             uri,
-            mimeType: "text/plain",
+            mimeType: 'text/plain',
             text: example.code,
           },
         ],
-      })
+      }),
     );
   }
 }

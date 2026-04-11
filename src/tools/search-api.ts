@@ -1,36 +1,41 @@
-import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { z } from "zod";
-import type { LoadedData, TypeKind } from "../types.js";
-import { tokenize } from "../search/index.js";
+import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { z } from 'zod';
+import type { LoadedData, TypeKind } from '../types.js';
+import { tokenize } from '../search/index.js';
 
-export function registerSearchApiTool(server: McpServer, data: LoadedData): void {
+export function registerSearchApiTool(
+  server: McpServer,
+  data: LoadedData,
+): void {
   server.registerTool(
-    "search_api",
+    'search_api',
     {
       description:
-        "Search the ModSharp API surface by keyword. Matches against type names, member names, " +
-        "method signatures, and summaries. Returns matching types with highlighted members.",
+        'Search the ModSharp API surface by keyword. Matches against type names, member names, ' +
+        'method signatures, and summaries. Returns matching types with highlighted members.',
       inputSchema: {
         query: z
           .string()
           .min(1)
           .max(200)
-          .describe("Search term (type name, method name, or keyword)"),
+          .describe('Search term (type name, method name, or keyword)'),
         kind: z
-          .enum(["interface", "class", "struct", "enum", "delegate", "all"])
-          .default("all")
-          .describe("Filter by type kind"),
+          .enum(['interface', 'class', 'struct', 'enum', 'delegate', 'all'])
+          .default('all')
+          .describe('Filter by type kind'),
         namespace: z
           .string()
           .optional()
-          .describe("Restrict search to a namespace (e.g. 'Sharp.Shared.Hooks')"),
+          .describe(
+            "Restrict search to a namespace (e.g. 'Sharp.Shared.Hooks')",
+          ),
         limit: z
           .number()
           .int()
           .min(1)
           .max(50)
           .default(20)
-          .describe("Maximum results"),
+          .describe('Maximum results'),
       },
       annotations: {
         readOnlyHint: true,
@@ -53,7 +58,7 @@ export function registerSearchApiTool(server: McpServer, data: LoadedData): void
 
       for (const [uid, type] of data.types) {
         // Filter by kind
-        if (kind && kind !== "all" && type.kind !== kind) continue;
+        if (kind && kind !== 'all' && type.kind !== kind) continue;
 
         // Filter by namespace
         if (namespace && !type.namespace.startsWith(namespace)) continue;
@@ -74,7 +79,9 @@ export function registerSearchApiTool(server: McpServer, data: LoadedData): void
         }
 
         // Check tokens
-        const typeTokens = new Set(tokenize(type.name + " " + (type.summary || "")));
+        const typeTokens = new Set(
+          tokenize(type.name + ' ' + (type.summary || '')),
+        );
         for (const qt of queryTokens) {
           if (typeTokens.has(qt)) score += 3;
           for (const t of typeTokens) {
@@ -96,7 +103,9 @@ export function registerSearchApiTool(server: McpServer, data: LoadedData): void
 
           // Also check member summary tokens
           if (member.summary) {
-            const memberTokens = new Set(tokenize(member.name + " " + member.summary));
+            const memberTokens = new Set(
+              tokenize(member.name + ' ' + member.summary),
+            );
             for (const qt of queryTokens) {
               if (memberTokens.has(qt)) {
                 score += 1;
@@ -133,15 +142,19 @@ export function registerSearchApiTool(server: McpServer, data: LoadedData): void
       return {
         content: [
           {
-            type: "text" as const,
+            type: 'text' as const,
             text: JSON.stringify(
-              { total: results.length, results: limited, hasMore: results.length > (limit ?? 20) },
+              {
+                total: results.length,
+                results: limited,
+                hasMore: results.length > (limit ?? 20),
+              },
               null,
-              2
+              2,
             ),
           },
         ],
       };
-    }
+    },
   );
 }

@@ -1,19 +1,22 @@
-import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { z } from "zod";
-import type { LoadedData } from "../types.js";
+import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { z } from 'zod';
+import type { LoadedData } from '../types.js';
 
-export function registerGetCodeExampleTool(server: McpServer, data: LoadedData): void {
+export function registerGetCodeExampleTool(
+  server: McpServer,
+  data: LoadedData,
+): void {
   server.registerTool(
-    "get_code_example",
+    'get_code_example',
     {
       description:
-        "Get a ModSharp code example by ID. Returns the full C# source code with metadata. " +
-        "Use search_docs with category filter to discover available examples.",
+        'Get a ModSharp code example by ID. Returns the full C# source code with metadata. ' +
+        'Use search_docs with category filter to discover available examples.',
       inputSchema: {
         id: z
           .string()
           .describe(
-            "Example ID (filename without extension, e.g. 'hello-world', 'command', 'native-hook')"
+            "Example ID (filename without extension, e.g. 'hello-world', 'command', 'native-hook')",
           ),
       },
       annotations: {
@@ -27,14 +30,16 @@ export function registerGetCodeExampleTool(server: McpServer, data: LoadedData):
       if (!example) {
         // Try partial match
         const matches = Array.from(data.examples.keys()).filter((k) =>
-          k.toLowerCase().includes(id.toLowerCase())
+          k.toLowerCase().includes(id.toLowerCase()),
         );
         return {
           content: [
             {
-              type: "text" as const,
+              type: 'text' as const,
               text: `Example not found: ${id}.${
-                matches.length > 0 ? ` Available matches: ${matches.join(", ")}` : ""
+                matches.length > 0
+                  ? ` Available matches: ${matches.join(', ')}`
+                  : ''
               }`,
             },
           ],
@@ -45,7 +50,7 @@ export function registerGetCodeExampleTool(server: McpServer, data: LoadedData):
       return {
         content: [
           {
-            type: "text" as const,
+            type: 'text' as const,
             text: JSON.stringify(
               {
                 id: example.id,
@@ -57,11 +62,11 @@ export function registerGetCodeExampleTool(server: McpServer, data: LoadedData):
                 sourceFile: example.sourceFile,
               },
               null,
-              2
+              2,
             ),
           },
         ],
       };
-    }
+    },
   );
 }

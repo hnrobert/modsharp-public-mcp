@@ -1,10 +1,15 @@
-import { readdir, readFile, writeFile, mkdir } from "node:fs/promises";
-import { resolve, join, extname, relative } from "node:path";
-import type { ApiTypeInfo, NamespaceInfo, MemberInfo, ParameterInfo } from "../src/types.js";
+import { readdir, readFile, writeFile, mkdir } from 'node:fs/promises';
+import { resolve, join, extname, relative } from 'node:path';
+import type {
+  ApiTypeInfo,
+  NamespaceInfo,
+  MemberInfo,
+  ParameterInfo,
+} from '../src/types.js';
 
-const PROJECT_ROOT = resolve(import.meta.dirname, "..");
-const SOURCE_DIR = resolve(PROJECT_ROOT, "data/fetched/Sharp.Shared");
-const OUTPUT_DIR = resolve(PROJECT_ROOT, "data/generated");
+const PROJECT_ROOT = resolve(import.meta.dirname, '..');
+const SOURCE_DIR = resolve(PROJECT_ROOT, 'data/fetched/Sharp.Shared');
+const OUTPUT_DIR = resolve(PROJECT_ROOT, 'data/generated');
 
 async function findCsFiles(dir: string): Promise<string[]> {
   const files: string[] = [];
@@ -13,7 +18,7 @@ async function findCsFiles(dir: string): Promise<string[]> {
     const fullPath = join(dir, entry.name);
     if (entry.isDirectory()) {
       files.push(...(await findCsFiles(fullPath)));
-    } else if (entry.isFile() && entry.name.endsWith(".cs")) {
+    } else if (entry.isFile() && entry.name.endsWith('.cs')) {
       files.push(fullPath);
     }
   }
@@ -28,17 +33,20 @@ interface XmlDoc {
   example?: string;
 }
 
-function parseXmlDoc(lines: string[], endLineIdx: number): { doc: XmlDoc; startIdx: number } | null {
+function parseXmlDoc(
+  lines: string[],
+  endLineIdx: number,
+): { doc: XmlDoc; startIdx: number } | null {
   // Walk backwards from the declaration to find /// comments
   let i = endLineIdx - 1;
   const docLines: string[] = [];
 
   while (i >= 0) {
     const trimmed = lines[i].trim();
-    if (trimmed.startsWith("///")) {
-      docLines.unshift(lines[i].replace(/^\s*\/\/\/\s?/, "").trim());
+    if (trimmed.startsWith('///')) {
+      docLines.unshift(lines[i].replace(/^\s*\/\/\/\s?/, '').trim());
       i--;
-    } else if (trimmed === "" || trimmed.startsWith("//")) {
+    } else if (trimmed === '' || trimmed.startsWith('//')) {
       // skip blank lines or non-XML comments between doc lines
       if (docLines.length > 0) i--;
       else break;
@@ -49,7 +57,7 @@ function parseXmlDoc(lines: string[], endLineIdx: number): { doc: XmlDoc; startI
 
   if (docLines.length === 0) return null;
 
-  const raw = docLines.join("\n");
+  const raw = docLines.join('\n');
   const doc: XmlDoc = { params: new Map() };
 
   // Extract <summary>
@@ -82,19 +90,22 @@ function parseXmlDoc(lines: string[], endLineIdx: number): { doc: XmlDoc; startI
 
 function cleanXmlText(text: string): string {
   return text
-    .replace(/<see\s+cref="([^"]+)"\s*\/>/g, "$1")
-    .replace(/<see\s+langword="([^"]+)"\s*\/>/g, "$1")
-    .replace(/<seealso\s+cref="([^"]+)"\s*\/>/g, "$1")
-    .replace(/<paramref\s+name="([^"]+)"\s*\/>/g, "$1")
-    .replace(/<c>([^<]*)<\/c>/g, "`$1`")
-    .replace(/<code>([\s\S]*?)<\/code>/g, "$1")
-    .replace(/<para\s*\/?>/g, "\n")
-    .replace(/<br\s*\/?>/gi, "\n")
-    .replace(/<list[^>]*>/g, "")
-    .replace(/<item>/g, "- ")
-    .replace(/<description>/g, "")
-    .replace(/<\/?(list|item|description|para|remarks|summary|returns|example|note|tip|warning|caution|important)[^>]*>/g, "")
-    .replace(/\n{3,}/g, "\n\n")
+    .replace(/<see\s+cref="([^"]+)"\s*\/>/g, '$1')
+    .replace(/<see\s+langword="([^"]+)"\s*\/>/g, '$1')
+    .replace(/<seealso\s+cref="([^"]+)"\s*\/>/g, '$1')
+    .replace(/<paramref\s+name="([^"]+)"\s*\/>/g, '$1')
+    .replace(/<c>([^<]*)<\/c>/g, '`$1`')
+    .replace(/<code>([\s\S]*?)<\/code>/g, '$1')
+    .replace(/<para\s*\/?>/g, '\n')
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<list[^>]*>/g, '')
+    .replace(/<item>/g, '- ')
+    .replace(/<description>/g, '')
+    .replace(
+      /<\/?(list|item|description|para|remarks|summary|returns|example|note|tip|warning|caution|important)[^>]*>/g,
+      '',
+    )
+    .replace(/\n{3,}/g, '\n\n')
     .trim();
 }
 
@@ -104,18 +115,18 @@ function extractObsolete(text: string): string | undefined {
 }
 
 function parseParameters(paramsStr: string): ParameterInfo[] {
-  if (!paramsStr || paramsStr.trim() === "") return [];
+  if (!paramsStr || paramsStr.trim() === '') return [];
 
   const params: ParameterInfo[] = [];
   // Split by comma, respecting generic brackets and parentheses
   let depth = 0;
-  let current = "";
+  let current = '';
   for (const ch of paramsStr) {
     if (ch === '<' || ch === '(') depth++;
     else if (ch === '>' || ch === ')') depth--;
     if (ch === ',' && depth === 0) {
       params.push(parseSingleParam(current.trim()));
-      current = "";
+      current = '';
     } else {
       current += ch;
     }
@@ -128,7 +139,7 @@ function parseParameters(paramsStr: string): ParameterInfo[] {
 
 function parseSingleParam(param: string): ParameterInfo {
   // e.g. "string input", "IBaseEntity? activator = null", "in TakeDamageInfo info"
-  let clean = param.replace(/^\s*(ref|out|in|params)\s+/, "");
+  let clean = param.replace(/^\s*(ref|out|in|params)\s+/, '');
   const defaultValueMatch = clean.match(/=\s*(.+)$/);
   if (defaultValueMatch) {
     clean = clean.slice(0, clean.length - defaultValueMatch[0].length);
@@ -136,24 +147,30 @@ function parseSingleParam(param: string): ParameterInfo {
 
   // Split into type and name - last word is the name
   const parts = clean.trim().split(/\s+/);
-  const name = parts[parts.length - 1].replace(/\?$/, "");
-  const type = parts.slice(0, parts.length - 1).join(" ").replace(/\?$/, "");
+  const name = parts[parts.length - 1].replace(/\?$/, '');
+  const type = parts
+    .slice(0, parts.length - 1)
+    .join(' ')
+    .replace(/\?$/, '');
 
   return {
     name,
-    type: type || "object",
+    type: type || 'object',
     defaultValue: defaultValueMatch?.[1]?.trim(),
   };
 }
 
-function parseCsFile(filePath: string, content: string): { types: ApiTypeInfo[]; namespaces: NamespaceInfo[] } {
+function parseCsFile(
+  filePath: string,
+  content: string,
+): { types: ApiTypeInfo[]; namespaces: NamespaceInfo[] } {
   const types: ApiTypeInfo[] = [];
   const namespaces: NamespaceInfo[] = [];
 
-  const lines = content.split("\n");
+  const lines = content.split('\n');
 
   // Find namespace
-  let ns = "";
+  let ns = '';
   for (const line of lines) {
     const nsMatch = line.match(/^namespace\s+([\w.]+)\s*[;{]/);
     if (nsMatch) {
@@ -171,31 +188,39 @@ function parseCsFile(filePath: string, content: string): { types: ApiTypeInfo[];
     const line = lines[i].trim();
 
     // Skip comments, using, regions, blank
-    if (!line || line.startsWith("//") || line.startsWith("using ") || line.startsWith("#region") || line.startsWith("#endregion")) continue;
+    if (
+      !line ||
+      line.startsWith('//') ||
+      line.startsWith('using ') ||
+      line.startsWith('#region') ||
+      line.startsWith('#endregion')
+    )
+      continue;
 
     // Match type declaration
     const typeMatch = line.match(
-      /^(?:\[([^\]]+)\]\s*)*((?:(?:public|internal|sealed|static|abstract|unsafe|readonly|partial)\s+)*)((?:readonly\s+record\s+)?(?:interface|class|struct|enum|delegate))\s+(\w+)(?:<([^>]+)>)?(?:\s*:\s*(.+?))?(?:\s*{)?\s*$/
+      /^(?:\[([^\]]+)\]\s*)*((?:(?:public|internal|sealed|static|abstract|unsafe|readonly|partial)\s+)*)((?:readonly\s+record\s+)?(?:interface|class|struct|enum|delegate))\s+(\w+)(?:<([^>]+)>)?(?:\s*:\s*(.+?))?(?:\s*{)?\s*$/,
     );
 
     if (!typeMatch) continue;
 
-    const attributes = typeMatch[1] || "";
-    const modifiers = typeMatch[2] || "";
-    const kindStr = typeMatch[3].replace("readonly record ", "");
+    const attributes = typeMatch[1] || '';
+    const modifiers = typeMatch[2] || '';
+    const kindStr = typeMatch[3].replace('readonly record ', '');
     const typeName = typeMatch[4];
     const genericParams = typeMatch[5];
     const inheritance = typeMatch[6]?.trim();
 
     // Map kind
-    let kind: ApiTypeInfo["kind"] = "class";
-    if (kindStr.includes("interface")) kind = "interface";
-    else if (kindStr.includes("struct") || kindStr.includes("record")) kind = "struct";
-    else if (kindStr.includes("enum")) kind = "enum";
-    else if (kindStr.includes("delegate")) kind = "delegate";
+    let kind: ApiTypeInfo['kind'] = 'class';
+    if (kindStr.includes('interface')) kind = 'interface';
+    else if (kindStr.includes('struct') || kindStr.includes('record'))
+      kind = 'struct';
+    else if (kindStr.includes('enum')) kind = 'enum';
+    else if (kindStr.includes('delegate')) kind = 'delegate';
 
     const uid = `${ns}.${typeName}`;
-    const isStatic = modifiers.includes("static");
+    const isStatic = modifiers.includes('static');
 
     // Get XML doc for type
     const typeDocResult = parseXmlDoc(lines, i);
@@ -206,9 +231,9 @@ function parseCsFile(filePath: string, content: string): { types: ApiTypeInfo[];
     let inheritanceList: string[] = [];
     let implementsList: string[] = [];
     if (inheritance) {
-      const parts = inheritance.split(",").map((s) => s.trim());
+      const parts = inheritance.split(',').map((s) => s.trim());
       for (const part of parts) {
-        if (kind === "interface" || part.startsWith("I")) {
+        if (kind === 'interface' || part.startsWith('I')) {
           implementsList.push(part);
         } else {
           inheritanceList.push(part);
@@ -218,7 +243,7 @@ function parseCsFile(filePath: string, content: string): { types: ApiTypeInfo[];
 
     // Parse members - find the type body
     const members: MemberInfo[] = [];
-    if (kind !== "delegate") {
+    if (kind !== 'delegate') {
       const bodyResult = extractTypeBody(lines, i);
       if (bodyResult) {
         parseMembers(bodyResult, uid, ns, members);
@@ -239,7 +264,9 @@ function parseCsFile(filePath: string, content: string): { types: ApiTypeInfo[];
       members,
       deprecated,
       isStatic,
-      typeParameters: genericParams ? genericParams.split(",").map((s) => s.trim()) : undefined,
+      typeParameters: genericParams
+        ? genericParams.split(',').map((s) => s.trim())
+        : undefined,
     });
   }
 
@@ -247,7 +274,7 @@ function parseCsFile(filePath: string, content: string): { types: ApiTypeInfo[];
   if (ns && types.length > 0) {
     namespaces.push({
       uid: ns,
-      name: ns.split(".").pop() || ns,
+      name: ns.split('.').pop() || ns,
       childNamespaces: [],
       types: types.map((t) => t.uid),
     });
@@ -256,24 +283,27 @@ function parseCsFile(filePath: string, content: string): { types: ApiTypeInfo[];
   return { types, namespaces };
 }
 
-function extractTypeBody(lines: string[], typeLineIdx: number): string[] | null {
+function extractTypeBody(
+  lines: string[],
+  typeLineIdx: number,
+): string[] | null {
   // Find opening brace
   let braceStart = typeLineIdx;
   for (let i = typeLineIdx; i < lines.length; i++) {
-    if (lines[i].includes("{")) {
+    if (lines[i].includes('{')) {
       braceStart = i;
       break;
     }
     // If it's a single-line declaration without body (delegate, etc.)
-    if (lines[i].trim().endsWith(";")) return null;
+    if (lines[i].trim().endsWith(';')) return null;
   }
 
   let depth = 0;
   const bodyLines: string[] = [];
   for (let i = braceStart; i < lines.length; i++) {
     for (const ch of lines[i]) {
-      if (ch === "{") depth++;
-      else if (ch === "}") depth--;
+      if (ch === '{') depth++;
+      else if (ch === '}') depth--;
     }
     bodyLines.push(lines[i]);
     if (depth === 0) break;
@@ -286,15 +316,31 @@ function extractTypeBody(lines: string[], typeLineIdx: number): string[] | null 
   return bodyLines;
 }
 
-function parseMembers(bodyLines: string[], parentUid: string, ns: string, members: MemberInfo[]): void {
+function parseMembers(
+  bodyLines: string[],
+  parentUid: string,
+  ns: string,
+  members: MemberInfo[],
+): void {
   for (let i = 0; i < bodyLines.length; i++) {
     const line = bodyLines[i].trim();
 
     // Skip blanks, comments, regions, attributes on own line
-    if (!line || line.startsWith("//") && !line.startsWith("///") || line.startsWith("#region") || line.startsWith("#endregion")) continue;
+    if (
+      !line ||
+      (line.startsWith('//') && !line.startsWith('///')) ||
+      line.startsWith('#region') ||
+      line.startsWith('#endregion')
+    )
+      continue;
 
     // Skip nested types (lines with access modifier + type keyword)
-    if (/^(?:public|internal|private|protected)\s+(?:sealed\s+|static\s+|abstract\s+)*(?:interface|class|struct|enum)\s+/.test(line)) continue;
+    if (
+      /^(?:public|internal|private|protected)\s+(?:sealed\s+|static\s+|abstract\s+)*(?:interface|class|struct|enum)\s+/.test(
+        line,
+      )
+    )
+      continue;
 
     // Get XML doc
     const docResult = parseXmlDoc(bodyLines, i);
@@ -306,22 +352,22 @@ function parseMembers(bodyLines: string[], parentUid: string, ns: string, member
 
     // Property: Type Name { get; [set;] }
     const propMatch = line.match(
-      /^(?:\[.*?\]\s*)*(?:(?:public|internal|protected|private|new|unsafe|virtual|abstract|override|sealed|static|extern)\s+)*([\w.<>\[\],\s\?]+?)\s+(\w+)\s*\{([^}]*)\}/
+      /^(?:\[.*?\]\s*)*(?:(?:public|internal|protected|private|new|unsafe|virtual|abstract|override|sealed|static|extern)\s+)*([\w.<>\[\],\s\?]+?)\s+(\w+)\s*\{([^}]*)\}/,
     );
-    if (propMatch && !line.includes("(") && !line.startsWith("public const")) {
+    if (propMatch && !line.includes('(') && !line.startsWith('public const')) {
       const [, typeStr, name, accessors] = propMatch;
-      const isStatic = line.includes("static ");
+      const isStatic = line.includes('static ');
       members.push({
         uid: `${parentUid}.${name}`,
         name,
-        kind: "property",
+        kind: 'property',
         summary: docResult?.doc.summary,
         propertyType: typeStr.trim(),
         isStatic,
-        isVirtual: line.includes("virtual "),
-        isAbstract: line.includes("abstract "),
-        hasGetter: accessors.includes("get"),
-        hasSetter: accessors.includes("set"),
+        isVirtual: line.includes('virtual '),
+        isAbstract: line.includes('abstract '),
+        hasGetter: accessors.includes('get'),
+        hasSetter: accessors.includes('set'),
         deprecated,
         syntax: line,
       });
@@ -329,13 +375,19 @@ function parseMembers(bodyLines: string[], parentUid: string, ns: string, member
     }
 
     // Enum member: Name, or Name = Value,
-    if (/^\s*(?:\[.*?\]\s*)*\w+\s*[=,]/.test(line) && !line.includes("(") && !line.includes("{")) {
-      const enumMatch = line.match(/^\s*(?:\[.*?\]\s*)*(\w+)\s*(?:=\s*([^,]+))?\s*,?\s*$/);
+    if (
+      /^\s*(?:\[.*?\]\s*)*\w+\s*[=,]/.test(line) &&
+      !line.includes('(') &&
+      !line.includes('{')
+    ) {
+      const enumMatch = line.match(
+        /^\s*(?:\[.*?\]\s*)*(\w+)\s*(?:=\s*([^,]+))?\s*,?\s*$/,
+      );
       if (enumMatch) {
         members.push({
           uid: `${parentUid}.${enumMatch[1]}`,
           name: enumMatch[1],
-          kind: "field",
+          kind: 'field',
           summary: docResult?.doc.summary,
           isStatic: false,
           isVirtual: false,
@@ -351,42 +403,43 @@ function parseMembers(bodyLines: string[], parentUid: string, ns: string, member
 
     // Field: public const/modifier Type Name = Value;
     const fieldMatch = line.match(
-      /^(?:\[.*?\]\s*)*(?:(?:public|internal|protected|private|new|unsafe|static|readonly|const|volatile)\s+)+([\w.<>\[\],\s\?]+?)\s+(\w+)\s*(?:=\s*(.+?))?\s*;/
+      /^(?:\[.*?\]\s*)*(?:(?:public|internal|protected|private|new|unsafe|static|readonly|const|volatile)\s+)+([\w.<>\[\],\s\?]+?)\s+(\w+)\s*(?:=\s*(.+?))?\s*;/,
     );
-    if (fieldMatch && !line.includes("(") && !line.includes("{")) {
+    if (fieldMatch && !line.includes('(') && !line.includes('{')) {
       const [, typeStr, name, value] = fieldMatch;
       members.push({
         uid: `${parentUid}.${name}`,
         name,
-        kind: "field",
+        kind: 'field',
         summary: docResult?.doc.summary,
         fieldType: typeStr.trim(),
-        isStatic: line.includes("static ") || line.includes("const "),
+        isStatic: line.includes('static ') || line.includes('const '),
         isVirtual: false,
         isAbstract: false,
         hasGetter: false,
         hasSetter: false,
         deprecated,
-        enumValue: value?.trim()?.replace(/;$/, ""),
+        enumValue: value?.trim()?.replace(/;$/, ''),
       });
       continue;
     }
 
     // Method: ReturnType Name(params);
     const methodMatch = line.match(
-      /^(?:\[.*?\]\s*)*(?:(?:public|internal|protected|private|new|unsafe|virtual|abstract|override|sealed|static|extern)\s+)*([\w.<>\[\],\s\?]+?)\s+(\w+)\s*<([^>]+)>\s*\(([^)]*)\)/
+      /^(?:\[.*?\]\s*)*(?:(?:public|internal|protected|private|new|unsafe|virtual|abstract|override|sealed|static|extern)\s+)*([\w.<>\[\],\s\?]+?)\s+(\w+)\s*<([^>]+)>\s*\(([^)]*)\)/,
     );
     if (!methodMatch) {
       // Try without generic return
       const methodMatch2 = line.match(
-        /^(?:\[.*?\]\s*)*(?:(?:public|internal|protected|private|new|unsafe|virtual|abstract|override|sealed|static|extern)\s+)*([\w.<>\[\],\s\?]+?)\s+(\w+)\s*\(([^)]*)\)/
+        /^(?:\[.*?\]\s*)*(?:(?:public|internal|protected|private|new|unsafe|virtual|abstract|override|sealed|static|extern)\s+)*([\w.<>\[\],\s\?]+?)\s+(\w+)\s*\(([^)]*)\)/,
       );
       if (methodMatch2) {
         const [, returnStr, name, paramsStr] = methodMatch2;
         // Skip if looks like a type declaration
-        if (["interface", "class", "struct", "enum"].includes(returnStr.trim())) continue;
+        if (['interface', 'class', 'struct', 'enum'].includes(returnStr.trim()))
+          continue;
 
-        const isStatic = line.includes("static ");
+        const isStatic = line.includes('static ');
         const params = parseParameters(paramsStr);
         // Add param descriptions from XML doc
         if (docResult?.doc.params) {
@@ -399,13 +452,13 @@ function parseMembers(bodyLines: string[], parentUid: string, ns: string, member
         members.push({
           uid: `${parentUid}.${name}`,
           name,
-          kind: name === parentUid.split(".").pop() ? "constructor" : "method",
+          kind: name === parentUid.split('.').pop() ? 'constructor' : 'method',
           summary: docResult?.doc.summary,
           parameters: params.length > 0 ? params : undefined,
-          returnType: returnStr.trim() === "void" ? "void" : returnStr.trim(),
+          returnType: returnStr.trim() === 'void' ? 'void' : returnStr.trim(),
           isStatic,
-          isVirtual: line.includes("virtual "),
-          isAbstract: line.includes("abstract "),
+          isVirtual: line.includes('virtual '),
+          isAbstract: line.includes('abstract '),
           hasGetter: false,
           hasSetter: false,
           deprecated,
@@ -415,19 +468,19 @@ function parseMembers(bodyLines: string[], parentUid: string, ns: string, member
       }
     } else {
       const [, returnStr, name, genericPart, paramsStr] = methodMatch;
-      const isStatic = line.includes("static ");
+      const isStatic = line.includes('static ');
       const params = parseParameters(paramsStr);
 
       members.push({
         uid: `${parentUid}.${name}`,
         name,
-        kind: "method",
+        kind: 'method',
         summary: docResult?.doc.summary,
         parameters: params.length > 0 ? params : undefined,
         returnType: returnStr.trim(),
         isStatic,
-        isVirtual: line.includes("virtual "),
-        isAbstract: line.includes("abstract "),
+        isVirtual: line.includes('virtual '),
+        isAbstract: line.includes('abstract '),
         hasGetter: false,
         hasSetter: false,
         deprecated,
@@ -439,7 +492,7 @@ function parseMembers(bodyLines: string[], parentUid: string, ns: string, member
 }
 
 async function main() {
-  console.log("Parsing C# source files from:", SOURCE_DIR);
+  console.log('Parsing C# source files from:', SOURCE_DIR);
 
   const files = await findCsFiles(SOURCE_DIR);
   console.log(`Found ${files.length} .cs files`);
@@ -452,7 +505,7 @@ async function main() {
   const kindCounts: Record<string, number> = {};
 
   for (const file of files) {
-    const content = await readFile(file, "utf-8");
+    const content = await readFile(file, 'utf-8');
     const { types, namespaces } = parseCsFile(file, content);
 
     for (const type of types) {
@@ -475,10 +528,10 @@ async function main() {
   // Build namespace hierarchy
   const nsUids = Object.keys(allNamespaces).sort();
   for (const uid of nsUids) {
-    const parts = uid.split(".");
+    const parts = uid.split('.');
     if (parts.length > 2) {
       // Find parent namespace
-      const parentUid = parts.slice(0, -1).join(".");
+      const parentUid = parts.slice(0, -1).join('.');
       if (allNamespaces[parentUid]) {
         allNamespaces[parentUid].childNamespaces.push(uid);
         allNamespaces[uid].parentNamespace = parentUid;
@@ -487,10 +540,10 @@ async function main() {
   }
 
   // Ensure root namespace exists
-  if (!allNamespaces["Sharp.Shared"]) {
-    allNamespaces["Sharp.Shared"] = {
-      uid: "Sharp.Shared",
-      name: "Shared",
+  if (!allNamespaces['Sharp.Shared']) {
+    allNamespaces['Sharp.Shared'] = {
+      uid: 'Sharp.Shared',
+      name: 'Shared',
       childNamespaces: [],
       types: [],
     };
@@ -501,23 +554,23 @@ async function main() {
 
   // Write API types
   await writeFile(
-    join(OUTPUT_DIR, "api-types.json"),
-    JSON.stringify(allTypes, null, 2)
+    join(OUTPUT_DIR, 'api-types.json'),
+    JSON.stringify(allTypes, null, 2),
   );
 
   // Write API index
   await writeFile(
-    join(OUTPUT_DIR, "api-index.json"),
-    JSON.stringify({ namespaces: allNamespaces }, null, 2)
+    join(OUTPUT_DIR, 'api-index.json'),
+    JSON.stringify({ namespaces: allNamespaces }, null, 2),
   );
 
   console.log(`\nParsed ${typeCount} types with ${memberCount} total members`);
-  console.log("Type kinds:", kindCounts);
-  console.log("Namespaces:", nsUids.length);
-  console.log("Output written to:", OUTPUT_DIR);
+  console.log('Type kinds:', kindCounts);
+  console.log('Namespaces:', nsUids.length);
+  console.log('Output written to:', OUTPUT_DIR);
 }
 
 main().catch((err) => {
-  console.error("Error:", err);
+  console.error('Error:', err);
   process.exit(1);
 });

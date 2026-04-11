@@ -6,9 +6,9 @@ export function tokenize(text: string): string[] {
   const tokens = new Set<string>();
 
   // Split on PascalCase boundaries
-  const pascalParts = text.replace(/([a-z])([A-Z])/g, "$1 $2").split(/\s+/);
+  const pascalParts = text.replace(/([a-z])([A-Z])/g, '$1 $2').split(/\s+/);
   for (const part of pascalParts) {
-    const lower = part.toLowerCase().replace(/[^a-z0-9]/g, "");
+    const lower = part.toLowerCase().replace(/[^a-z0-9]/g, '');
     if (lower.length >= 2) {
       tokens.add(lower);
     }
@@ -22,7 +22,10 @@ export function tokenize(text: string): string[] {
   }
 
   // Split on non-alphanumeric
-  const words = text.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
+  const words = text
+    .toLowerCase()
+    .split(/[^a-z0-9]+/)
+    .filter(Boolean);
   for (const word of words) {
     if (word.length >= 2) {
       tokens.add(word);
@@ -40,7 +43,7 @@ export interface SearchEntry {
   /** Original content for snippet extraction */
   content: string;
   locale?: string;
-  type: "doc" | "api-type" | "example" | "schema";
+  type: 'doc' | 'api-type' | 'example' | 'schema';
 }
 
 export function buildSearchEntries(
@@ -53,7 +56,7 @@ export function buildSearchEntries(
 
 export interface TextSearchResult {
   id: string;
-  type: "doc" | "api-type" | "example" | "schema";
+  type: 'doc' | 'api-type' | 'example' | 'schema';
   title: string;
   snippet: string;
   locale?: string;
@@ -101,7 +104,7 @@ export function searchEntries(
         id: entry.id,
         type: entry.type,
         title: entry.title,
-        locale: entry.locale as "en" | "cn" | undefined,
+        locale: entry.locale as 'en' | 'cn' | undefined,
         snippet: extractSnippet(entry.content, query),
         relevanceScore: score,
       });
@@ -119,13 +122,13 @@ function extractSnippet(content: string, query: string): string {
 
   if (idx === -1) {
     // Return first 200 chars
-    return content.slice(0, 200).trim() + (content.length > 200 ? "..." : "");
+    return content.slice(0, 200).trim() + (content.length > 200 ? '...' : '');
   }
 
   const start = Math.max(0, idx - 60);
   const end = Math.min(content.length, idx + query.length + 140);
   let snippet = content.slice(start, end).trim();
-  if (start > 0) snippet = "..." + snippet;
-  if (end < content.length) snippet += "...";
+  if (start > 0) snippet = '...' + snippet;
+  if (end < content.length) snippet += '...';
   return snippet;
 }

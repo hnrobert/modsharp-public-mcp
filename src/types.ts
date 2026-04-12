@@ -126,6 +126,33 @@ export interface SchemaField {
   notSaved?: boolean;
 }
 
+// === Source2 Entity (Hammer) ===
+export interface EntityClass {
+  classname: string;
+  entityType: string; // "Mesh", "Point", etc.
+  description: string;
+  games: string[];
+  properties: EntityProperty[];
+  inputs: EntityInputOutput[];
+  outputs: EntityInputOutput[];
+  relatedSchemaUid?: string; // cross-ref e.g. "server/CTriggerMultiple"
+}
+
+export interface EntityProperty {
+  friendlyName: string;
+  internalName: string;
+  variableType: string;
+  description: string;
+  options?: Array<{ name: string; key: string; description?: string }>;
+}
+
+export interface EntityInputOutput {
+  name: string;
+  description: string;
+  variableType: string;
+  direction: 'Input' | 'Output';
+}
+
 // === Loaded Data (runtime) ===
 export interface LoadedData {
   types: Map<string, ApiTypeInfo>;
@@ -134,6 +161,7 @@ export interface LoadedData {
   docsCn: DocArticle[];
   examples: Map<string, CodeExample>;
   schemas: Map<string, SchemaClass>;
+  entities: Map<string, EntityClass>;
   searchIndex: Map<string, string[]>;
   toc: TocNode[];
   methodsIndex: Map<string, string[]>; // lowercase method name -> type UIDs
@@ -142,7 +170,7 @@ export interface LoadedData {
 // === Tool result types ===
 export interface SearchResult {
   id: string;
-  type: 'doc' | 'api-type' | 'example' | 'schema';
+  type: 'doc' | 'api-type' | 'example' | 'schema' | 'entity';
   title: string;
   locale?: Locale;
   snippet: string;

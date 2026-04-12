@@ -82,4 +82,25 @@ export function registerAllResources(
       }),
     );
   }
+
+  // CS2 Entity definitions
+  for (const [classname, entity] of data.entities) {
+    server.registerResource(
+      `entity-${classname}`,
+      `modsharp://entity/${classname}`,
+      {
+        description: `CS2 entity: ${classname} (${entity.entityType}, ${entity.properties.length} props, ${entity.inputs.length} inputs, ${entity.outputs.length} outputs)`,
+        mimeType: 'application/json',
+      },
+      async () => ({
+        contents: [
+          {
+            uri: `modsharp://entity/${classname}`,
+            mimeType: 'application/json',
+            text: JSON.stringify(entity, null, 2),
+          },
+        ],
+      }),
+    );
+  }
 }

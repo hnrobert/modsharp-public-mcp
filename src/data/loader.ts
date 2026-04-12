@@ -6,6 +6,7 @@ import type {
   DocArticle,
   CodeExample,
   SchemaClass,
+  EntityClass,
   TocNode,
   LoadedData,
 } from '../types.js';
@@ -26,6 +27,7 @@ export async function loadData(): Promise<LoadedData> {
     docsCn,
     examples,
     schemasRaw,
+    entitiesRaw,
     searchIndexRaw,
     toc,
   ] = await Promise.all([
@@ -35,6 +37,7 @@ export async function loadData(): Promise<LoadedData> {
     readJson<DocArticle[]>('docs-cn.json'),
     readJson<CodeExample[]>('examples.json'),
     readJson<Record<string, SchemaClass>>('schemas.json'),
+    readJson<Record<string, EntityClass>>('entities.json').catch(() => ({})),
     readJson<{ tokens: Record<string, string[]> }>('search-index.json'),
     readJson<TocNode[]>('toc.json'),
   ]);
@@ -48,6 +51,7 @@ export async function loadData(): Promise<LoadedData> {
     examples.map((e) => [e.id, e]),
   );
   const schemas = new Map<string, SchemaClass>(Object.entries(schemasRaw));
+  const entities = new Map<string, EntityClass>(Object.entries(entitiesRaw));
   const searchIndex = new Map<string, string[]>(
     Object.entries(searchIndexRaw.tokens),
   );
@@ -75,6 +79,7 @@ export async function loadData(): Promise<LoadedData> {
     docsCn,
     examples: examplesMap,
     schemas,
+    entities,
     searchIndex,
     toc,
     methodsIndex,

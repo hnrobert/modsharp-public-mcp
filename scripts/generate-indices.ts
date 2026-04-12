@@ -5,6 +5,7 @@ import type {
   DocArticle,
   CodeExample,
   SchemaClass,
+  EntityClass,
   SearchIndex,
 } from '../src/types.js';
 
@@ -40,13 +41,14 @@ function tokenize(text: string): string[] {
 async function main() {
   console.log('Generating search index...');
 
-  const [apiTypesRaw, docsEnRaw, docsCnRaw, examplesRaw, schemasRaw] =
+  const [apiTypesRaw, docsEnRaw, docsCnRaw, examplesRaw, schemasRaw, entitiesRaw] =
     await Promise.all([
       readFile(join(OUTPUT_DIR, 'api-types.json'), 'utf-8'),
       readFile(join(OUTPUT_DIR, 'docs-en.json'), 'utf-8'),
       readFile(join(OUTPUT_DIR, 'docs-cn.json'), 'utf-8'),
       readFile(join(OUTPUT_DIR, 'examples.json'), 'utf-8'),
       readFile(join(OUTPUT_DIR, 'schemas.json'), 'utf-8'),
+      readFile(join(OUTPUT_DIR, 'entities.json'), 'utf-8').catch(() => '{}'),
     ]);
 
   const apiTypes = JSON.parse(apiTypesRaw) as Record<string, ApiTypeInfo>;
@@ -54,6 +56,7 @@ async function main() {
   const docsCn = JSON.parse(docsCnRaw) as DocArticle[];
   const examples = JSON.parse(examplesRaw) as CodeExample[];
   const schemas = JSON.parse(schemasRaw) as Record<string, SchemaClass>;
+  const entities = JSON.parse(entitiesRaw) as Record<string, EntityClass>;
 
   // Build inverted index: token -> entity IDs
   const invertedIndex = new Map<string, string[]>();
@@ -100,6 +103,19 @@ async function main() {
       ...schema.localFields.map((f) => `${f.name} ${f.type}`),
     ].join(' ');
     addTokens(tokenize(text), `schema:${uid}`);
+  }
+
+  // Index Source2 entities
+  for (const [classname, entity] of Object.entries(entities)) {
+    const text = [
+      classname,
+      entity.description,
+      entity.entityType,
+      ...entity.properties.map((p) => `${p.friendlyName} ${p.internalName} ${p.description}`),
+      ...entity.inputs.map((i) => `${i.name} ${i.description}`),
+      ...entity.outputs.map((o) => `${o.name} ${o.description}`),
+    ].join(' ');
+    addTokens(tokenize(text), `entity:${classname}`);
   }
 
   // Deduplicate index entries and convert to plain object

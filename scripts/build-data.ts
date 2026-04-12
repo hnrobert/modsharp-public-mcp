@@ -23,6 +23,7 @@ console.log('Root:', ROOT);
 run('scripts/parse-csharp.ts', 'Step 1: Parse C# sources');
 run('scripts/parse-markdown.ts', 'Step 2: Parse markdown docs & examples');
 run('scripts/parse-schemas.ts', 'Step 3: Parse CS2 schemas');
-run('scripts/generate-indices.ts', 'Step 4: Generate search index');
+run('scripts/parse-entities.ts', 'Step 4: Parse Source2 entities');
+run('scripts/generate-indices.ts', 'Step 5: Generate search index');
 
 console.log('\n=== Build complete! ===');

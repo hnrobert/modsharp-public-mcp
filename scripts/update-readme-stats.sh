@@ -7,52 +7,92 @@ if [[ -z "$TAG" ]]; then
   exit 0
 fi
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+GEN="$ROOT/data/generated"
 
-node -e "
-const fs = require('fs');
-const path = require('path');
+# ── Extract counts from generated JSON using python3 ──
 
-const GEN = path.join('$ROOT', 'data/generated');
-const load = n => JSON.parse(fs.readFileSync(path.join(GEN, n), 'utf8'));
+read -r -d '' EXTRACT << 'PYEOF' || true
+import json, sys, os
 
-const api = load('api-types.json');
-const schemas = load('schemas.json');
-const docsEn = load('docs-en.json');
-const docsCn = load('docs-cn.json');
-const examples = load('examples.json');
-const si = load('search-index.json');
+gen = os.environ["GEN"]
 
-let members = 0;
-for (const t of Object.values(api)) members += t.members.length;
-const cats = new Set(Object.values(schemas).map(s => s.category));
-let netFields = 0;
-for (const s of Object.values(schemas)) netFields += (s.networkVars || []).length;
-const tokens = Object.keys(si.tokens || si).length;
+def load(name):
+    with open(os.path.join(gen, name)) as f:
+        return json.load(f)
 
-const stats = [
-  '## Data Stats (as of $TAG)',
-  '',
-  '- **' + Object.keys(api).length + '** ModSharp API types with **' + members + '** members',
-  '- **' + Object.keys(schemas).length + '** CS2/Source2 engine schema classes across **' + cats.size + '** categories with **' + netFields + '** network fields',
-  '- **' + docsEn.length + '** English + **' + docsCn.length + '** Chinese documentation articles',
-  '- **' + examples.length + '** code examples',
-  '- **' + tokens + '** search index tokens',
-].join('\n') + '\n';
+api = load("api-types.json")
+schemas = load("schemas.json")
+entities = load("entities.json")
+docs_en = load("docs-en.json")
+docs_cn = load("docs-cn.json")
+examples = load("examples.json")
+si = load("search-index.json")
 
-const readmePath = path.join('$ROOT', 'README.md');
-const readme = fs.readFileSync(readmePath, 'utf8');
-const updated = readme.replace(
-  /## Data Stats \(as of [^)]+\)\n\n(?:- .+\n)*/,
-  stats
-);
+members = sum(len(t["members"]) for t in api.values())
+cats = len({s["category"] for s in schemas.values()})
+net_fields = sum(len(s.get("networkVars", [])) for s in schemas.values())
+tokens = len(si.get("tokens", si))
 
-if (updated === readme) {
-  console.error('ERROR: Data Stats section not found in README.md');
-  process.exit(1);
-}
-fs.writeFileSync(readmePath, updated, 'utf8');
+entity_props = sum(len(e.get("properties", [])) for e in entities.values())
+entity_inputs = sum(len(e.get("inputs", [])) for e in entities.values())
+entity_outputs = sum(len(e.get("outputs", [])) for e in entities.values())
 
-console.log('Updated README.md with stats for $TAG');
-console.log('  ' + Object.keys(api).length + ' types, ' + members + ' members, ' + Object.keys(schemas).length + ' schemas (' + cats.size + ' categories), ' + netFields + ' network fields');
-console.log('  ' + docsEn.length + ' EN + ' + docsCn.length + ' CN docs, ' + examples.length + ' examples, ' + tokens + ' tokens');
+print(f"API_TYPES={len(api)}")
+print(f"MEMBERS={members}")
+print(f"SCHEMA_CLASSES={len(schemas)}")
+print(f"SCHEMA_CATS={cats}")
+print(f"NET_FIELDS={net_fields}")
+print(f"ENTITY_COUNT={len(entities)}")
+print(f"ENTITY_PROPS={entity_props}")
+print(f"ENTITY_INPUTS={entity_inputs}")
+print(f"ENTITY_OUTPUTS={entity_outputs}")
+print(f"DOCS_EN={len(docs_en)}")
+print(f"DOCS_CN={len(docs_cn)}")
+print(f"EXAMPLES={len(examples)}")
+print(f"TOKENS={tokens}")
+PYEOF
+
+eval "$(GEN="$GEN" python3 -c "$EXTRACT")"
+
+# ── Build stats section ──
+
+stats="## Data Stats (as of $TAG)
+
+- **$API_TYPES** ModSharp API types with **$(printf "%'d" "$MEMBERS")** members
+- **$SCHEMA_CLASSES** CS2/Source2 engine schema classes across **$SCHEMA_CATS** categories with **$(printf "%'d" "$NET_FIELDS")** network fields
+- **$ENTITY_COUNT** CS2 Hammer entity definitions with **$(printf "%'d" "$ENTITY_PROPS")** properties, **$(printf "%'d" "$ENTITY_INPUTS")** inputs, **$(printf "%'d" "$ENTITY_OUTPUTS")** outputs
+- **$DOCS_EN** English + **$DOCS_CN** Chinese documentation articles
+- **$EXAMPLES** code examples
+- **$(printf "%'d" "$TOKENS")** search index tokens
 "
+
+# ── Replace in README ──
+
+readme_path="$ROOT/README.md"
+
+read -r -d '' REPLACE << 'PYEOF' || true
+import re, sys
+
+stats = sys.stdin.read()
+with open(sys.argv[1], "r") as f:
+    content = f.read()
+
+updated = re.sub(
+    r"## Data Stats \(as of [^)]+\)\n\n(?:- .+\n)*",
+    stats,
+    content,
+)
+if updated == content:
+    print("ERROR: Data Stats section not found in README.md", file=sys.stderr)
+    sys.exit(1)
+
+with open(sys.argv[1], "w") as f:
+    f.write(updated)
+PYEOF
+
+echo -n "$stats" | python3 -c "$REPLACE" "$readme_path"
+
+echo "Updated README.md with stats for $TAG"
+echo "  $API_TYPES types, $MEMBERS members, $SCHEMA_CLASSES schemas ($SCHEMA_CATS categories), $NET_FIELDS network fields"
+echo "  $ENTITY_COUNT entities ($ENTITY_PROPS props, $ENTITY_INPUTS inputs, $ENTITY_OUTPUTS outputs)"
+echo "  $DOCS_EN EN + $DOCS_CN CN docs, $EXAMPLES examples, $TOKENS tokens"

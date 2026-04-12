@@ -9,7 +9,7 @@ export const PROJECT_ROOT = resolve(__dirname, '..');
 export const SERVER_NAME = 'modsharp-docs';
 export const SERVER_VERSION = '1.0.0';
 
-export const SERVER_INSTRUCTIONS = `ModSharp is a Counter-Strike 2 modding framework. This MCP server provides access to its API documentation and guides.
+export const SERVER_INSTRUCTIONS = `ModSharp is a Counter-Strike 2 modding framework. This MCP server provides access to its API documentation, guides, and CS2 entity/schema data.
 
 Available tools:
 - search_docs: Full-text search across all documentation
@@ -18,9 +18,14 @@ Available tools:
 - list_namespace: Browse the namespace/type hierarchy
 - get_guide: Retrieve a documentation article
 - get_code_example: Get a code example
+- search_schemas: Search CS2 engine schema classes (network fields from C++ headers)
+- get_schema_type: Get full details of a CS2 schema class
+- search_entities: Search CS2 Hammer entity definitions (keyvalues, inputs, outputs from Source2 Wiki)
+- get_entity: Get full details of a CS2 Hammer entity
 
 Start by using list_namespace to explore the API structure, or search_api to find specific types.
-The main namespace is "Sharp.Shared" with sub-namespaces like Hooks, Managers, GameEntities, etc.`;
+The main namespace is "Sharp.Shared" with sub-namespaces like Hooks, Managers, GameEntities, etc.
+For CS2 mapping/modding, use search_entities to find Hammer entities and search_schemas for engine internals.`;
 
 export const MAX_SEARCH_RESULTS = 50;
 export const DEFAULT_SEARCH_LIMIT = 10;

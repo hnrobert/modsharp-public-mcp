@@ -4,31 +4,7 @@ An MCP (Model Context Protocol) server that exposes ModSharp CS2 modding framewo
 
 ## What It Does
 
-Provides 6 MCP tools and 447+ resources that allow AI assistants to:
-
-- **Search documentation** across 88 bilingual (EN/CN) articles
-- **Browse the API surface** of 326 types (180 interfaces, 75 enums, 56 structs, 15 classes)
-- **Look up type details** with members, summaries, and syntax
-- **Retrieve code examples** (34 complete C# examples)
-- **Navigate the namespace hierarchy** (21 namespaces)
-
-## Quick Start
-
-```bash
-# Install dependencies
-pnpm install
-
-# Fetch source data from GitHub + parse + build search index
-pnpm build:data
-
-# Build the MCP server
-pnpm build
-
-# Run locally
-pnpm start
-```
-
-The `build:data` command automatically fetches the latest source files from [github.com/Kxnrl/modsharp-public](https://github.com/Kxnrl/modsharp-public) via the GitHub API and caches them locally. Re-running skips already-downloaded files.
+Provides 10 MCP tools that allow AI assistants to search and browse ModSharp API documentation, CS2 engine schemas, and Hammer entity definitions.
 
 ## IDE Configuration
 
@@ -115,6 +91,8 @@ Then use `"command": "node", "args": ["/path/to/modsharp-public-mcp/dist/index.j
 | `get_code_example` | Get a code example by ID |
 | `search_schemas` | Search CS2 engine schema classes (CBaseEntity, C_CSPlayerPawn, etc.) |
 | `get_schema_type` | Get full details of a CS2 schema class (fields, network vars) |
+| `search_entities` | Search CS2 Hammer entity definitions (trigger_multiple, prop_dynamic, etc.) |
+| `get_entity` | Get full details of a CS2 Hammer entity (keyvalues, inputs, outputs) |
 
 ## MCP Resources
 
@@ -122,6 +100,7 @@ Then use `"command": "node", "args": ["/path/to/modsharp-public-mcp/dist/index.j
 - `modsharp://docs/{locale}/{path}` - Documentation articles (Markdown)
 - `modsharp://examples/{id}` - Code examples (plain text)
 - `modsharp://schema/{category}/{className}` - CS2 engine schema classes (JSON)
+- `modsharp://entity/{classname}` - CS2 Hammer entity definitions (JSON)
 - `modsharp://namespaces` - Full namespace hierarchy (JSON)
 - `modsharp://toc` - Documentation table of contents (JSON)
 
@@ -136,13 +115,20 @@ Then use `"command": "node", "args": ["/path/to/modsharp-public-mcp/dist/index.j
 ## Development
 
 ```bash
-pnpm fetch        # Fetch latest source data from GitHub
-pnpm build:data   # Fetch + parse + index (full data rebuild)
-pnpm dev          # Run with hot reload
-pnpm build        # Build server
-pnpm test         # Run tests
-pnpm typecheck    # Type check
+# Install dependencies
+pnpm install
+
+# Fetch source data from GitHub + parse + build search index
+pnpm build:data
+
+# Build the MCP server
+pnpm build
+
+# Run locally
+pnpm start
 ```
+
+The `build:data` command automatically fetches the latest source files from [github.com/Kxnrl/modsharp-public](https://github.com/Kxnrl/modsharp-public) via the GitHub API and caches them locally. Re-running skips already-downloaded files.
 
 ## Architecture
 
@@ -151,19 +137,20 @@ graph LR
   subgraph build["Build-time (docker build / pnpm build:data)"]
     A[GitHub: Kxnrl/modsharp-public<br/>ModSharp C# SDK + Docs] -->|fetch| B[data/fetched/<br/>source cache]
     F[GitHub: SteamTracking/GameTracking-CS2<br/>CS2 Engine Schemas] -->|fetch| B
+    G[GitHub: Source2Wiki/Source2Wiki<br/>Entity Definitions] -->|fetch| B
     B -->|parse + index| C[data/generated/<br/>JSON data]
   end
   subgraph runtime["Runtime (MCP_TRANSPORT=stdio | http)"]
     C -->|load| D[MCP server]
     D -->|stdio| E[Local IDE]
-    D -->|HTTP SSE / Streamable| G[Remote IDEs]
+    D -->|HTTP SSE / Streamable| H[Remote IDEs]
   end
 ```
 
 **Build-time** (baked into Docker image, no network at runtime):
 
-1. Fetch — Downloads source files from GitHub (modsharp-public + GameTracking-CS2), caches locally
-2. Parse — Extracts API types from C# sources, articles from markdown, CS2 schemas from engine headers
+1. Fetch — Downloads source files from GitHub (modsharp-public + GameTracking-CS2 + Source2Wiki), caches locally
+2. Parse — Extracts API types from C# sources, articles from markdown, CS2 schemas from engine headers, entity definitions from Source2 Wiki JSON
 3. Index — Builds a token-based search index
 
 Only `data/generated/` (final JSON) enters the Docker image.

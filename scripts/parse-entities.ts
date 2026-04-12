@@ -1,4 +1,4 @@
-import { readFile, writeFile, mkdir, unlink, readdir } from 'node:fs/promises';
+import { readFile, writeFile, mkdir, readdir } from 'node:fs/promises';
 import { resolve, join } from 'node:path';
 import type { EntityClass, EntityProperty, EntityInputOutput, SchemaClass } from '../src/types.js';
 
@@ -40,7 +40,15 @@ async function main(): Promise<void> {
   console.log('Parsing Source2 entity data from cache...');
 
   // Read all cached entity JSONs
-  const files = await readdir(CACHE_DIR);
+  let files: string[];
+  try {
+    files = await readdir(CACHE_DIR);
+  } catch {
+    console.log('No cached entity data found, writing empty entities.json');
+    await mkdir(OUTPUT_DIR, { recursive: true });
+    await writeFile(join(OUTPUT_DIR, 'entities.json'), '{}');
+    return;
+  }
   const entityFiles = files.filter((f) => f.endsWith('.json') && f !== '_index.json');
   console.log(`Found ${entityFiles.length} cached entity files`);
 
@@ -49,10 +57,11 @@ async function main(): Promise<void> {
   for (const file of entityFiles) {
     const raw = await readFile(join(CACHE_DIR, file), 'utf-8');
     const detail = JSON.parse(raw) as WikiEntityDetail;
+    if (!detail || !Array.isArray(detail.Pages)) continue;
     const pages = detail.Pages;
 
-    // Find CS2 page, fallback to first page
-    const cs2Page = pages.find((p) => p.Game === 'cs2') || pages[0];
+    // Only include entities that have a CS2 page
+    const cs2Page = pages.find((p) => p.Game === 'cs2');
     if (!cs2Page) continue;
 
     const classname = detail.Name;
@@ -100,6 +109,7 @@ async function main(): Promise<void> {
       outputs,
     };
   }
+  console.log(`Filtered to ${Object.keys(entities).length} CS2 entities`);
 
   // Cross-reference with schemas
   let schemas: Record<string, SchemaClass> = {};
@@ -133,16 +143,6 @@ async function main(): Promise<void> {
     JSON.stringify(entities, null, 2),
   );
   console.log(`Wrote ${Object.keys(entities).length} entities to entities.json`);
-
-  // Delete FGD files (if they still exist)
-  for (const fgdFile of ['data/base.fdg', 'data/cs2.fdg']) {
-    try {
-      await unlink(resolve(PROJECT_ROOT, fgdFile));
-      console.log(`Deleted ${fgdFile}`);
-    } catch {
-      // Already deleted
-    }
-  }
 }
 
 main().catch((err) => {

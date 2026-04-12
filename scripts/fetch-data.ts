@@ -1,5 +1,5 @@
-import { mkdir, writeFile, readFile, readdir, stat } from 'node:fs/promises';
-import { resolve, dirname, join } from 'node:path';
+import { mkdir, writeFile, stat } from 'node:fs/promises';
+import { resolve, dirname } from 'node:path';
 
 const PROJECT_ROOT = resolve(import.meta.dirname, '..');
 const FETCHED_DIR = resolve(PROJECT_ROOT, 'data/fetched');
@@ -20,6 +20,8 @@ interface SourceRepo {
   extensions: Set<string>; // file extensions to download
   remap: (gitPath: string) => string; // git path -> local path under fetched/
   extraFiles?: string[]; // exact paths to always include
+  /** Optional filter: return false to skip downloading this file */
+  filter?: (gitPath: string) => boolean;
 }
 
 const MODSHARP: SourceRepo = {
@@ -131,7 +133,13 @@ async function downloadFile(
 
 async function fetchFromSource(src: SourceRepo): Promise<void> {
   const allEntries = await fetchTree(src);
-  const toDownload = allEntries.filter((e) => shouldFetch(e, src));
+  let toDownload = allEntries.filter((e) => shouldFetch(e, src));
+
+  // Apply optional filter
+  if (src.filter) {
+    toDownload = toDownload.filter((e) => src.filter!(e.path));
+  }
+
   console.log(`  ${toDownload.length} files to download\n`);
 
   const BATCH = 20;
@@ -149,97 +157,6 @@ async function fetchFromSource(src: SourceRepo): Promise<void> {
   console.log(`\n  ${downloaded} downloaded, ${cached} cached.\n`);
 }
 
-// ── Source2 Wiki Entity Fetcher ────────────────────────────────────
-
-const ENTITY_INDEX_URL =
-  'https://raw.githubusercontent.com/Source2Wiki/Source2Wiki/master/static/fgd_dump/entityIndex.json';
-const ENTITY_DETAIL_URL =
-  'https://raw.githubusercontent.com/Source2Wiki/Source2Wiki/master/fgd_dump/{classname}.json';
-
-function parseFgdClassnames(content: string): Set<string> {
-  const names = new Set<string>();
-  const re = /@(PointClass|SolidClass|MoveClass|NPCClass|FilterClass)\b[^=]*=\s*(\w+)/g;
-  let m: RegExpExecArray | null;
-  while ((m = re.exec(content)) !== null) {
-    names.add(m[2]);
-  }
-  return names;
-}
-
-async function fetchCached(url: string, cacheFile: string): Promise<string> {
-  try {
-    return await readFile(cacheFile, 'utf-8');
-  } catch {
-    const res = await fetch(url);
-    if (!res.ok) throw new Error(`HTTP ${res.status} fetching ${url}`);
-    const text = await res.text();
-    await writeFile(cacheFile, text);
-    return text;
-  }
-}
-
-async function fetchEntities(): Promise<void> {
-  const entityDir = resolve(FETCHED_DIR, 'entities');
-
-  // Read FGD classnames
-  let fgdClassnames: Set<string>;
-  try {
-    const baseFgd = await readFile(resolve(PROJECT_ROOT, 'data/base.fdg'), 'utf-8');
-    const cs2Fgd = await readFile(resolve(PROJECT_ROOT, 'data/cs2.fdg'), 'utf-8');
-    fgdClassnames = new Set([...parseFgdClassnames(baseFgd), ...parseFgdClassnames(cs2Fgd)]);
-  } catch {
-    // FGD files may not exist (already deleted) — try loading from existing cache
-    try {
-      const cached = await readdir(entityDir);
-      fgdClassnames = new Set(
-        cached.filter((f) => f.endsWith('.json') && f !== '_index.json').map((f) => f.replace('.json', '')),
-      );
-      console.log(`  Re-using ${fgdClassnames.size} classnames from cached entity files`);
-    } catch {
-      console.warn('  No FGD files and no cached entities — skipping entity fetch');
-      return;
-    }
-  }
-  console.log(`  ${fgdClassnames.size} entity classnames from FGD`);
-
-  await mkdir(entityDir, { recursive: true });
-
-  // Fetch index
-  const indexRaw = await fetchCached(ENTITY_INDEX_URL, join(entityDir, '_index.json'));
-  const indexEntries = JSON.parse(indexRaw) as Array<{ Classname: string }>;
-  const matched = indexEntries.filter((e) => fgdClassnames.has(e.Classname));
-  console.log(`  Source2 Wiki: ${indexEntries.length} total, ${matched.length} matched`);
-
-  // Batch-download entity detail JSONs
-  const BATCH = 20;
-  let downloaded = 0;
-
-  for (let i = 0; i < matched.length; i += BATCH) {
-    const batch = matched.slice(i, i + BATCH);
-    const results = await Promise.all(
-      batch.map(async (entry) => {
-        const cacheFile = join(entityDir, `${entry.Classname}.json`);
-        try {
-          await fetchCached(
-            ENTITY_DETAIL_URL.replace('{classname}', entry.Classname),
-            cacheFile,
-          );
-          return true;
-        } catch (err) {
-          console.warn(`  Skip ${entry.Classname}: ${(err as Error).message}`);
-          return false;
-        }
-      }),
-    );
-    downloaded += results.filter(Boolean).length;
-    const done = Math.min(i + BATCH, matched.length);
-    process.stdout.write(`  ${done}/${matched.length} entity files processed\r`);
-  }
-
-  const cached = matched.length - downloaded;
-  console.log(`\n  ${downloaded} downloaded, ${cached} cached.\n`);
-}
-
 // ── Main ────────────────────────────────────────────────────────────
 
 async function main(): Promise<void> {
@@ -252,8 +169,20 @@ async function main(): Promise<void> {
   console.log('── CS2 Schemas (SteamTracking/GameTracking-CS2) ──');
   await fetchFromSource(CS2_SCHEMAS);
 
-  console.log('── Source2 Wiki Entities ──');
-  await fetchEntities();
+  console.log('── Source2 Wiki Entities (Source2Wiki/Source2Wiki) ──');
+  await fetchFromSource({
+    owner: 'Source2Wiki',
+    repo: 'Source2Wiki',
+    branch: 'master',
+    prefixes: ['fgd_dump/', 'static/fgd_dump/'],
+    extensions: new Set(['.json']),
+    extraFiles: ['static/fgd_dump/entityIndex.json'],
+    remap(gitPath: string): string {
+      if (gitPath === 'static/fgd_dump/entityIndex.json') return 'entities/_index.json';
+      // fgd_dump/trigger_multiple.json -> entities/trigger_multiple.json
+      return gitPath.replace('fgd_dump/', 'entities/');
+    },
+  });
 
   console.log('Done! All source data fetched.');
 }

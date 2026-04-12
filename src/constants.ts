@@ -24,6 +24,9 @@ Available tools:
 - get_entity: Get full details of a CS2 Hammer entity
 
 Start by using list_namespace to explore the API structure, or search_api to find specific types.
+The API has two layers:
+- Sharp.Shared: public API for plugin developers (180 interfaces, 15 classes, 53 structs, 75 enums)
+- Sharp.Core: framework internals implementing those interfaces (272 classes) — useful for understanding how things work under the hood
 The main namespace is "Sharp.Shared" with sub-namespaces like Hooks, Managers, GameEntities, etc.
 For CS2 mapping/modding, use search_entities to find Hammer entities and search_schemas for engine internals.`;
 

@@ -60,13 +60,13 @@ async function main(): Promise<void> {
     if (!detail || !Array.isArray(detail.Pages)) continue;
     const pages = detail.Pages;
 
-    // Only include entities that have a CS2 page
-    const cs2Page = pages.find((p) => p.Game === 'cs2');
-    if (!cs2Page) continue;
+    // Prefer CS2 page; fallback to dota2 (shared base.fgd entities)
+    const page = pages.find((p) => p.Game === 'cs2') || pages.find((p) => p.Game === 'dota2');
+    if (!page) continue;
 
     const classname = detail.Name;
 
-    const properties: EntityProperty[] = cs2Page.Properties.map((p) => ({
+    const properties: EntityProperty[] = page.Properties.map((p) => ({
       friendlyName: p.FriendlyName,
       internalName: p.InternalName,
       variableType: p.VariableType,
@@ -81,7 +81,7 @@ async function main(): Promise<void> {
           : undefined,
     }));
 
-    const inputs: EntityInputOutput[] = (cs2Page.InputOutputs || [])
+    const inputs: EntityInputOutput[] = (page.InputOutputs || [])
       .filter((io) => io.Type === 'Input')
       .map((io) => ({
         name: io.Name,
@@ -90,7 +90,7 @@ async function main(): Promise<void> {
         direction: 'Input' as const,
       }));
 
-    const outputs: EntityInputOutput[] = (cs2Page.InputOutputs || [])
+    const outputs: EntityInputOutput[] = (page.InputOutputs || [])
       .filter((io) => io.Type === 'Output')
       .map((io) => ({
         name: io.Name,
@@ -101,8 +101,8 @@ async function main(): Promise<void> {
 
     entities[classname] = {
       classname,
-      entityType: cs2Page.EntityType,
-      description: cs2Page.Description,
+      entityType: page.EntityType,
+      description: page.Description,
       games: pages.map((p) => p.Game),
       properties,
       inputs,

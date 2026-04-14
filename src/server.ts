@@ -9,10 +9,10 @@ import { registerAllTools } from './tools/index.js';
 import { registerAllResources } from './resources/index.js';
 
 export function createServer(data: LoadedData): McpServer {
-  const server = new McpServer({
-    name: SERVER_NAME,
-    version: SERVER_VERSION,
-  });
+  const server = new McpServer(
+    { name: SERVER_NAME, version: SERVER_VERSION },
+    { instructions: SERVER_INSTRUCTIONS },
+  );
 
   // Register capabilities with instructions
   server.server.registerCapabilities({

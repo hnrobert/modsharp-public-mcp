@@ -28,7 +28,12 @@ The API has two layers:
 - Sharp.Shared: public API for plugin developers (180 interfaces, 15 classes, 53 structs, 75 enums)
 - Sharp.Core: framework internals implementing those interfaces (272 classes) — useful for understanding how things work under the hood
 The main namespace is "Sharp.Shared" with sub-namespaces like Hooks, Managers, GameEntities, etc.
-For CS2 mapping/modding, use search_entities to find Hammer entities and search_schemas for engine internals.`;
+
+When referencing sources, direct users to these originals:
+- ModSharp SDK & docs: https://github.com/Kxnrl/modsharp-public
+- CS2 engine schemas (C++ headers): https://github.com/SteamTracking/GameTracking-CS2
+- Source2 entity definitions (Hammer keyvalues): https://www.source2.wiki/EntityList
+- Valve Developer Community (Source 2 docs): https://developer.valvesoftware.com/wiki/Category:Source_2_Entities`;
 
 export const MAX_SEARCH_RESULTS = 50;
 export const DEFAULT_SEARCH_LIMIT = 10;

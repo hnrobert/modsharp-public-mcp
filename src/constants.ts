@@ -6,8 +6,11 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 // In dist: __dirname is dist/ -> ../  (project root)
 export const PROJECT_ROOT = resolve(__dirname, '..');
 
-export const SERVER_NAME = 'modsharp-docs';
-export const SERVER_VERSION = '1.0.0';
+declare const PKG_NAME: string;
+declare const PKG_VERSION: string;
+
+export const SERVER_NAME: string = PKG_NAME;
+export const SERVER_VERSION: string = PKG_VERSION;
 
 export const SERVER_INSTRUCTIONS = `ModSharp is a Counter-Strike 2 modding framework. This MCP server provides access to its API documentation, guides, and CS2 entity/schema data.
 

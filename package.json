@@ -31,7 +31,8 @@
   },
   "files": [
     "dist/",
-    "data/generated/"
+    "data/generated/",
+    "./*.ts"
   ],
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",

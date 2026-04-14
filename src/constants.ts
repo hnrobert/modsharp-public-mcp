@@ -21,7 +21,7 @@ Available tools:
 - search_schemas: Search CS2 engine schema classes (network fields from C++ headers)
 - get_schema_type: Get full details of a CS2 schema class
 - search_entities: Search CS2 Hammer entity definitions (keyvalues, inputs, outputs from Source2 Wiki)
-- get_entity: Get full details of a CS2 Hammer entity
+- get_entity: Get full keyvalue list, inputs, and outputs for a CS2 Hammer entity
 
 Start by using list_namespace to explore the API structure, or search_api to find specific types.
 The API has two layers:

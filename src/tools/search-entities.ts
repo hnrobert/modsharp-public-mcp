@@ -11,15 +11,16 @@ export function registerSearchEntitiesTool(
     {
       description:
         'Search CS2 Hammer entity definitions (trigger_multiple, prop_dynamic, etc.) from Source2 Wiki. ' +
-        'Matches classnames, descriptions, property names, and input/output names. ' +
-        'Returns entity type, description, property/input/output counts.',
+        'Matches classnames, descriptions, keyvalue names, and input/output names. ' +
+        'Returns entity type, description, keyvalue/input/output counts. ' +
+        'Use this to find entity classnames, then use get_entity for full keyvalue details.',
       inputSchema: {
         query: z
           .string()
           .min(1)
           .max(200)
           .describe(
-            "Search term (entity classname like 'trigger', property name like 'damage')",
+            "Search term (entity classname like 'trigger', keyvalue name like 'damage')",
           ),
         limit: z
           .number()

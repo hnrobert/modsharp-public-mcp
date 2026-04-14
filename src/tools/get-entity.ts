@@ -10,8 +10,9 @@ export function registerGetEntityTool(
     'get_entity',
     {
       description:
-        'Get full details of a CS2 Hammer entity (keyvalues, inputs, outputs). ' +
-        'Use search_entities to discover available entities.',
+        'Get full details of a CS2 Hammer entity: all keyvalues (properties), inputs, and outputs. ' +
+        'This is the primary tool to answer questions like "what keyvalues does X entity have?" ' +
+        'Use search_entities to discover available entity classnames.',
       inputSchema: {
         classname: z
           .string()

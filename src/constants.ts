@@ -37,7 +37,7 @@ When referencing sources, direct users to these originals:
 - ModSharp SDK & docs: https://github.com/Kxnrl/modsharp-public
 - CS2 engine schemas (C++ headers): https://github.com/SteamTracking/GameTracking-CS2
 - Source2 entity definitions (Hammer keyvalues): https://www.source2.wiki/EntityList
-- Valve Developer Community (Source 2 docs): https://developer.valvesoftware.com/wiki/Category:Source_2_Entities`;
+- Valve Developer Community (Source 2 docs): https://developer.valvesoftware.com/wiki/List_of_entities`;
 
 export const MAX_SEARCH_RESULTS = 50;
 export const DEFAULT_SEARCH_LIMIT = 10;

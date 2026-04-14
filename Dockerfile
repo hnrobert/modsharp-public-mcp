@@ -13,10 +13,20 @@ COPY package.json pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile --prod
 
 # ---- Fetch & Build data ----
+# Set SKIP_DATA_BUILD=true when data was already built in CI
 FROM deps AS data
+ARG SKIP_DATA_BUILD=false
 COPY scripts/ scripts/
 COPY src/types.ts src/types.ts
-RUN pnpm build:data
+
+RUN mkdir -p data/generated
+COPY data/generated/ data/generated/
+
+RUN if [ "$SKIP_DATA_BUILD" = "true" ]; then \
+  echo "Skipping data build (using prebuilt data)"; \
+  else \
+  pnpm build:data; \
+  fi
 
 # ---- Build server ----
 FROM deps AS build

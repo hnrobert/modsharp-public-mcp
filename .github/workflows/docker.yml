@@ -66,11 +66,14 @@ jobs:
 
             git config user.name  "github-actions[bot]"
             git config user.email "github-actions[bot]@users.noreply.github.com"
-            git add package.json README.md
+            git add package.json README.md data/generated/
             git commit -m "chore(release): $TAG"
             git push origin "HEAD:${GITHUB_REF_NAME}"
+
+            echo "skip_data_build=true" >> "$GITHUB_OUTPUT"
           else
             echo "is_semver=false" >> "$GITHUB_OUTPUT"
+            echo "skip_data_build=false" >> "$GITHUB_OUTPUT"
           fi
 
           git tag "$TAG"
@@ -206,3 +209,5 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
           platforms: ${{ steps.platforms.outputs.list }}
+          build-args: |
+            SKIP_DATA_BUILD=${{ steps.prep.outputs.skip_data_build == 'true' && 'true' || 'false' }}

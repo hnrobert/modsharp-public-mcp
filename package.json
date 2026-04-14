@@ -1,6 +1,6 @@
 {
   "name": "modsharp-public-mcp",
-  "version": "0.2.7",
+  "version": "0.2.8",
   "description": "MCP server providing ModSharp CS2 modding framework documentation and API reference for IDE-integrated AI agents",
   "type": "module",
   "main": "dist/index.js",

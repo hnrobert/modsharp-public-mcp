@@ -1,6 +1,6 @@
 {
   "name": "modsharp-public-mcp",
-  "version": "0.2.1",
+  "version": "0.2.9",
   "description": "MCP server providing ModSharp CS2 modding framework documentation and API reference for IDE-integrated AI agents",
   "type": "module",
   "main": "dist/index.js",
@@ -31,7 +31,8 @@
   },
   "files": [
     "dist/",
-    "data/generated/"
+    "data/generated/",
+    "./*.ts"
   ],
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",

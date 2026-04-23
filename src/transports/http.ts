@@ -90,21 +90,25 @@ export function startHttp(data: LoadedData): void {
     }
   });
 
-  app.listen(PORT, () => {
+  const server = app.listen(PORT, () => {
     console.log(`ModSharp MCP server (HTTP) listening on port ${PORT}`);
     console.log(`  SSE:             http://localhost:${PORT}/sse`);
     console.log(`  Streamable HTTP: http://localhost:${PORT}/mcp`);
   });
 
-  process.on('SIGINT', async () => {
+  function shutdown(): void {
+    // Force exit after 2s regardless of pending transports
+    const timer = setTimeout(() => process.exit(0), 2000);
+    timer.unref();
+
+    server.close();
+
     for (const [sid, t] of transports) {
-      try {
-        await t.close();
-      } catch {
-        /* ignore */
-      }
       transports.delete(sid);
+      t.close().catch(() => {});
     }
-    process.exit(0);
-  });
+  }
+
+  process.on('SIGTERM', shutdown);
+  process.on('SIGINT', shutdown);
 }

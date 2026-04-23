@@ -8,6 +8,8 @@ import { registerGetGuideTool } from './get-guide.js';
 import { registerGetCodeExampleTool } from './get-code-example.js';
 import { registerSearchSchemasTool } from './search-schemas.js';
 import { registerGetSchemaTypeTool } from './get-schema-type.js';
+import { registerSearchEntitiesTool } from './search-entities.js';
+import { registerGetEntityTool } from './get-entity.js';
 
 export function registerAllTools(server: McpServer, data: LoadedData): void {
   registerSearchDocsTool(server, data);
@@ -18,4 +20,6 @@ export function registerAllTools(server: McpServer, data: LoadedData): void {
   registerGetCodeExampleTool(server, data);
   registerSearchSchemasTool(server, data);
   registerGetSchemaTypeTool(server, data);
+  registerSearchEntitiesTool(server, data);
+  registerGetEntityTool(server, data);
 }

@@ -1,0 +1,8 @@
+{
+  "servers": {
+    "modsharp": {
+      "url": "https://modsharp.hnrobert.space/mcp",
+      "type": "http"
+    }
+  },
+}

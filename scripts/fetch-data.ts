@@ -20,13 +20,15 @@ interface SourceRepo {
   extensions: Set<string>; // file extensions to download
   remap: (gitPath: string) => string; // git path -> local path under fetched/
   extraFiles?: string[]; // exact paths to always include
+  /** Optional filter: return false to skip downloading this file */
+  filter?: (gitPath: string) => boolean;
 }
 
 const MODSHARP: SourceRepo = {
   owner: 'Kxnrl',
   repo: 'modsharp-public',
   branch: 'master',
-  prefixes: ['Sharp.Shared/', 'docfx/docs/'],
+  prefixes: ['Sharp.Shared/', 'Sharp.Core/', 'docfx/docs/'],
   extensions: new Set(['.cs', '.md', '.yml', '.yaml', '.xml']),
   extraFiles: ['docfx/toc.yml'],
   remap(gitPath: string): string {
@@ -131,7 +133,13 @@ async function downloadFile(
 
 async function fetchFromSource(src: SourceRepo): Promise<void> {
   const allEntries = await fetchTree(src);
-  const toDownload = allEntries.filter((e) => shouldFetch(e, src));
+  let toDownload = allEntries.filter((e) => shouldFetch(e, src));
+
+  // Apply optional filter
+  if (src.filter) {
+    toDownload = toDownload.filter((e) => src.filter!(e.path));
+  }
+
   console.log(`  ${toDownload.length} files to download\n`);
 
   const BATCH = 20;
@@ -160,6 +168,21 @@ async function main(): Promise<void> {
 
   console.log('── CS2 Schemas (SteamTracking/GameTracking-CS2) ──');
   await fetchFromSource(CS2_SCHEMAS);
+
+  console.log('── Source2 Wiki Entities (Source2Wiki/Source2Wiki) ──');
+  await fetchFromSource({
+    owner: 'Source2Wiki',
+    repo: 'Source2Wiki',
+    branch: 'master',
+    prefixes: ['fgd_dump/', 'static/fgd_dump/'],
+    extensions: new Set(['.json']),
+    extraFiles: ['static/fgd_dump/entityIndex.json'],
+    remap(gitPath: string): string {
+      if (gitPath === 'static/fgd_dump/entityIndex.json') return 'entities/_index.json';
+      // fgd_dump/trigger_multiple.json -> entities/trigger_multiple.json
+      return gitPath.replace('fgd_dump/', 'entities/');
+    },
+  });
 
   console.log('Done! All source data fetched.');
 }

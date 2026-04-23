@@ -31,6 +31,21 @@ Add to `.mcp.json`:
 }
 ```
 
+#### VSCode + GitHub Copilot
+
+Add to `.vscode/mcp.json`:
+
+```json
+{
+  "servers": {
+    "modsharp": {
+      "url": "https://modsharp.hnrobert.space/mcp",
+      "type": "http"
+    }
+  },
+}
+```
+
 #### Cursor
 
 Add to `.cursor/mcp.json`:

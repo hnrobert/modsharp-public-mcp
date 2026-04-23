@@ -14,8 +14,8 @@ A public instance is available at `modsharp.hnrobert.space`.
 
 | Endpoint | Protocol | Clients |
 |----------|----------|---------|
-| `https://modsharp.hnrobert.space/sse` | SSE (2024-11-05) | Cursor, older clients |
-| `https://modsharp.hnrobert.space/mcp` | Streamable HTTP (2025-03-26) | Claude Code, newer clients |
+| `https://modsharp.hnrobert.space/sse` | SSE (2024-11-05) | Older clients |
+| `https://modsharp.hnrobert.space/mcp` | Streamable HTTP (2025-03-26) | Claude Code / Cursor, newer clients |
 
 #### Claude Code
 
@@ -34,6 +34,20 @@ Add to `.mcp.json`:
 #### Cursor
 
 Add to `.cursor/mcp.json`:
+
+```json
+{
+  "mcpServers": {
+    "modsharp": {
+      "url": "https://modsharp.hnrobert.space/mcp"
+    }
+  }
+}
+```
+
+#### Legacy clients
+
+> For older clients that only support SSE, use the `/sse` endpoint instead. Note that some newer clients may not support SSE, so the `/mcp` endpoint is recommended when possible.
 
 ```json
 {

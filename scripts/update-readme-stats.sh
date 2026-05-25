@@ -74,14 +74,12 @@ stats = sys.stdin.read()
 with open(sys.argv[1], "r") as f:
     content = f.read()
 
-updated = re.sub(
-    r"## Data Stats \(as of [^)]+\)\n\n(?:- .+\n)*",
-    stats,
-    content,
-)
-if updated == content:
+pattern = r"## Data Stats \(as of [^)]+\)\n\n(?:- .+\n)*"
+if not re.search(pattern, content):
     print("ERROR: Data Stats section not found in README.md", file=sys.stderr)
     sys.exit(1)
+
+updated = re.sub(pattern, stats, content)
 
 with open(sys.argv[1], "w") as f:
     f.write(updated)

@@ -133,14 +133,14 @@ Then use `"command": "node", "args": ["/path/to/modsharp-public-mcp/dist/index.j
 - `modsharp://namespaces` - Full namespace hierarchy (JSON)
 - `modsharp://toc` - Documentation table of contents (JSON)
 
-## Data Stats (as of v0.3.0)
+## Data Stats (as of v0.3.1)
 
-- **630** ModSharp API types with **7112** members
+- **631** ModSharp API types with **7146** members
 - **652** CS2/Source2 engine schema classes across **7** categories with **0** network fields
 - **469** CS2 Hammer entity definitions with **7952** properties, **8626** inputs, **2987** outputs
 - **44** English + **44** Chinese documentation articles
 - **34** code examples
-- **19535** search index tokens
+- **19590** search index tokens
 
 ## Development
 

@@ -2,10 +2,7 @@
 set -euo pipefail
 
 TAG="${1:-}"
-if [[ -z "$TAG" ]]; then
-  echo "No tag specified, skipping stats update."
-  exit 0
-fi
+LABEL="${TAG:-$(date -u +%Y-%m-%d)}"
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 GEN="$ROOT/data/generated"
 
@@ -56,7 +53,7 @@ eval "$(GEN="$GEN" python3 -c "$EXTRACT")"
 
 # ── Build stats section ──
 
-stats="## Data Stats (as of $TAG)
+stats="## Data Stats (as of $LABEL)
 
 - **$API_TYPES** ModSharp API types with **$(printf "%'d" "$MEMBERS")** members
 - **$SCHEMA_CLASSES** CS2/Source2 engine schema classes across **$SCHEMA_CATS** categories with **$(printf "%'d" "$NET_FIELDS")** network fields

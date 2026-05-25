@@ -19,41 +19,64 @@ A public instance is available at `modsharp.hnrobert.space`.
 
 #### Claude Code
 
-Add to `.mcp.json`:
+**Project** — add to `.mcp.json` in the project root:
 
 ```json
 {
   "mcpServers": {
     "modsharp": {
+      "type": "http",
       "url": "https://modsharp.hnrobert.space/mcp"
     }
   }
 }
 ```
 
+**Global** — add to `~/.claude/mcp.json`, or run once via CLI:
+
+```bash
+claude mcp add --scope user --transport http modsharp https://modsharp.hnrobert.space/mcp
+```
+
 #### VSCode + GitHub Copilot
 
-Add to `.vscode/mcp.json`:
+**Project** — add to `.vscode/mcp.json`:
 
 ```json
 {
   "servers": {
     "modsharp": {
-      "url": "https://modsharp.hnrobert.space/mcp",
-      "type": "http"
+      "type": "http",
+      "url": "https://modsharp.hnrobert.space/mcp"
     }
-  },
+  }
+}
+```
+
+**Global** — add to User `settings.json` (Command Palette → `Preferences: Open User Settings (JSON)`):
+
+```json
+{
+  "mcp": {
+    "servers": {
+      "modsharp": {
+        "type": "http",
+        "url": "https://modsharp.hnrobert.space/mcp"
+      }
+    }
+  }
 }
 ```
 
 #### Cursor
 
-Add to `.cursor/mcp.json`:
+**Project** — add to `.cursor/mcp.json`. **Global** — add to `~/.cursor/mcp.json`:
 
 ```json
 {
   "mcpServers": {
     "modsharp": {
+      "type": "http",
       "url": "https://modsharp.hnrobert.space/mcp"
     }
   }

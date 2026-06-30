@@ -8,6 +8,11 @@ import type {
   SchemaClass,
   EntityClass,
   TocNode,
+  VreSchemaBundle,
+  VreGame,
+  VreGameInfo,
+  VreSchemaClass,
+  VreSchemaEnum,
   LoadedData,
 } from '../types.js';
 import { PATHS } from '../constants.js';
@@ -30,6 +35,7 @@ export async function loadData(): Promise<LoadedData> {
     entitiesRaw,
     searchIndexRaw,
     toc,
+    vreBundle,
   ] = await Promise.all([
     readJson<Record<string, ApiTypeInfo>>('api-types.json'),
     readJson<{ namespaces: Record<string, NamespaceInfo> }>('api-index.json'),
@@ -40,6 +46,7 @@ export async function loadData(): Promise<LoadedData> {
     readJson<Record<string, EntityClass>>('entities.json').catch(() => ({})),
     readJson<{ tokens: Record<string, string[]> }>('search-index.json'),
     readJson<TocNode[]>('toc.json'),
+    readJson<VreSchemaBundle>('vre-schemas.json').catch(() => null),
   ]);
 
   // Convert records to Maps for O(1) lookup
@@ -72,6 +79,29 @@ export async function loadData(): Promise<LoadedData> {
     }
   }
 
+  // VRE schemas (ValveResourceFormat) — optional, loaded per-game
+  const vreSchemas = new Map<string, VreSchemaClass>(
+    vreBundle ? Object.entries(vreBundle.classes) : [],
+  );
+  const vreEnums = new Map<string, VreSchemaEnum>(
+    vreBundle ? Object.entries(vreBundle.enums) : [],
+  );
+  const vreSchemasByGame = new Map<VreGame, string[]>([
+    ['cs2', []],
+    ['dota2', []],
+    ['deadlock', []],
+  ]);
+  const vreEnumsByGame = new Map<VreGame, string[]>([
+    ['cs2', []],
+    ['dota2', []],
+    ['deadlock', []],
+  ]);
+  for (const [uid, cls] of vreSchemas) vreSchemasByGame.get(cls.game)!.push(uid);
+  for (const [uid, en] of vreEnums) vreEnumsByGame.get(en.game)!.push(uid);
+  const vreGames = vreBundle
+    ? vreBundle.games
+    : ({} as Record<VreGame, VreGameInfo>);
+
   return {
     types,
     namespaces,
@@ -83,5 +113,10 @@ export async function loadData(): Promise<LoadedData> {
     searchIndex,
     toc,
     methodsIndex,
+    vreSchemas,
+    vreEnums,
+    vreSchemasByGame,
+    vreEnumsByGame,
+    vreGames,
   };
 }

@@ -10,6 +10,9 @@ import { registerSearchSchemasTool } from './search-schemas.js';
 import { registerGetSchemaTypeTool } from './get-schema-type.js';
 import { registerSearchEntitiesTool } from './search-entities.js';
 import { registerGetEntityTool } from './get-entity.js';
+import { registerSearchVreSchemasTool } from './search-vre-schemas.js';
+import { registerGetVreSchemaTypeTool } from './get-vre-schema-type.js';
+import { registerGetVreEnumTool } from './get-vre-enum.js';
 
 export function registerAllTools(server: McpServer, data: LoadedData): void {
   registerSearchDocsTool(server, data);
@@ -22,4 +25,7 @@ export function registerAllTools(server: McpServer, data: LoadedData): void {
   registerGetSchemaTypeTool(server, data);
   registerSearchEntitiesTool(server, data);
   registerGetEntityTool(server, data);
+  registerSearchVreSchemasTool(server, data);
+  registerGetVreSchemaTypeTool(server, data);
+  registerGetVreEnumTool(server, data);
 }

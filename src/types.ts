@@ -126,6 +126,74 @@ export interface SchemaField {
   notSaved?: boolean;
 }
 
+// === VRE (ValveResourceFormat) Schema Types ===
+// Source: ValveResourceFormat/SchemaExplorer (DumpSource2 export), 3 games.
+export type VreGame = 'cs2' | 'dota2' | 'deadlock';
+
+// Recursive field type, discriminated on `category`.
+export type VreFieldType =
+  | { category: 'builtin'; name: string }
+  | { category: 'declared_class'; module: string; name: string }
+  | { category: 'declared_enum'; module: string; name: string }
+  | { category: 'atomic'; name: string; inner?: VreFieldType }
+  | { category: 'ptr'; inner: VreFieldType }
+  | { category: 'fixed_array'; count: number; inner: VreFieldType }
+  | { category: 'bitfield'; count: number };
+
+export interface VreMeta {
+  name: string;
+  value?: string;
+}
+
+export interface VreSchemaField {
+  name: string;
+  offset: number;
+  type: VreFieldType;
+  renderedType: string;
+  metadata?: VreMeta[];
+}
+
+export interface VreSchemaClass {
+  uid: string; // "{game}/{module}/{name}"
+  game: VreGame;
+  name: string;
+  module: string;
+  size: number;
+  parents: Array<{ module: string; name: string }>;
+  fields: VreSchemaField[];
+  metadata?: VreMeta[];
+}
+
+export interface VreSchemaEnumMember {
+  name: string;
+  value: number;
+  metadata?: VreMeta[];
+}
+
+export interface VreSchemaEnum {
+  uid: string; // "{game}/{module}/{name}"
+  game: VreGame;
+  name: string;
+  module: string;
+  alignment: string;
+  members: VreSchemaEnumMember[];
+  metadata?: VreMeta[];
+}
+
+export interface VreGameInfo {
+  revision: string;
+  versionDate: string;
+  classes: number;
+  enums: number;
+}
+
+export interface VreSchemaBundle {
+  generatedAt: string;
+  games: Record<VreGame, VreGameInfo>;
+  classes: Record<string, VreSchemaClass>;
+  enums: Record<string, VreSchemaEnum>;
+}
+
 // === Source2 Entity (Hammer) ===
 export interface EntityClass {
   classname: string;
@@ -165,6 +233,11 @@ export interface LoadedData {
   searchIndex: Map<string, string[]>;
   toc: TocNode[];
   methodsIndex: Map<string, string[]>; // lowercase method name -> type UIDs
+  vreSchemas: Map<string, VreSchemaClass>;
+  vreEnums: Map<string, VreSchemaEnum>;
+  vreSchemasByGame: Map<VreGame, string[]>;
+  vreEnumsByGame: Map<VreGame, string[]>;
+  vreGames: Record<VreGame, VreGameInfo>;
 }
 
 // === Tool result types ===

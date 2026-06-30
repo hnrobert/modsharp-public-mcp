@@ -103,4 +103,35 @@ export function registerAllResources(
       }),
     );
   }
+
+  // VRE schema index (ValveResourceFormat: CS2/Dota2/Deadlock).
+  // Single aggregate resource — per-item registration (29k+) would overwhelm resources/list.
+  server.registerResource(
+    'vre-games',
+    'modsharp://vre/games',
+    {
+      description:
+        'Valve engine schema index (ValveResourceFormat/SchemaExplorer) across CS2/Dota2/Deadlock — per-game revision, version, class/enum counts',
+      mimeType: 'application/json',
+    },
+    async () => ({
+      contents: [
+        {
+          uri: 'modsharp://vre/games',
+          mimeType: 'application/json',
+          text: JSON.stringify(
+            {
+              source: 'ValveResourceFormat/SchemaExplorer',
+              note: 'Use search_vre_schemas / get_vre_schema_type / get_vre_enum tools to query individual classes and enums.',
+              games: data.vreGames,
+              totalClasses: data.vreSchemas.size,
+              totalEnums: data.vreEnums.size,
+            },
+            null,
+            2,
+          ),
+        },
+      ],
+    }),
+  );
 }

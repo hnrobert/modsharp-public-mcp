@@ -21,13 +21,13 @@ Available tools:
 - list_namespace: Browse the namespace/type hierarchy
 - get_guide: Retrieve a documentation article
 - get_code_example: Get a code example
-- search_schemas: Search CS2 engine schema classes (network fields from C++ headers)
-- get_schema_type: Get full details of a CS2 schema class
+- search_header_schemas: Search CS2 engine schema header declarations (network fields from C++ headers, CS2 only)
+- get_header_schema: Get full details of a CS2 header schema class
 - search_entities: Search CS2 Hammer entity definitions (keyvalues, inputs, outputs from Source2 Wiki)
 - get_entity: Get full keyvalue list, inputs, and outputs for a CS2 Hammer entity
-- search_vre_schemas: Search Valve engine schemas (full memory layout: offsets, recursive types, sizes, enums) across CS2/Dota2/Deadlock from ValveResourceFormat. Distinct from search_schemas (CS2 network fields from headers).
-- get_vre_schema_type: Get full field layout of a Valve engine schema class
-- get_vre_enum: Get members of a Valve engine enum
+- search_schemas: Search Valve engine schemas (full memory layout: offsets, recursive types, sizes, enums) across CS2/Dota2/Deadlock from ValveResourceFormat. The primary engine-schema tool.
+- get_schema_fields: Get full field layout of a Valve engine schema class
+- get_enum: Get members of a Valve engine enum
 
 Start by using list_namespace to explore the API structure, or search_api to find specific types.
 The API has two layers:

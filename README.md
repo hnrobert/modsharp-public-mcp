@@ -141,13 +141,13 @@ Then use `"command": "node", "args": ["/path/to/modsharp-public-mcp/dist/index.j
 | `list_namespace` | Browse the ModSharp namespace/type hierarchy |
 | `get_guide` | Retrieve a documentation article |
 | `get_code_example` | Get a code example by ID |
-| `search_schemas` | Search CS2 engine schema classes (CBaseEntity, C_CSPlayerPawn, etc.) |
-| `get_schema_type` | Get full details of a CS2 schema class (fields, network vars) |
+| `search_header_schemas` | Search CS2 engine schema header declarations (network fields, C++ headers) |
+| `get_header_schema` | Get full details of a CS2 header schema class (fields, network vars) |
 | `search_entities` | Search CS2 Hammer entity definitions (trigger_multiple, prop_dynamic, etc.) |
 | `get_entity` | Get full details of a CS2 Hammer entity (keyvalues, inputs, outputs) |
-| `search_vre_schemas` | Search Valve engine schemas (full memory layout) across CS2/Dota2/Deadlock |
-| `get_vre_schema_type` | Get full field layout of a Valve engine schema class (offsets, types, sizes) |
-| `get_vre_enum` | Get members of a Valve engine enum (CS2/Dota2/Deadlock) |
+| `search_schemas` | Search Valve engine schemas (full memory layout) across CS2/Dota2/Deadlock |
+| `get_schema_fields` | Get full field layout of a Valve engine schema class (offsets, types, sizes) |
+| `get_enum` | Get members of a Valve engine enum (CS2/Dota2/Deadlock) |
 
 ## MCP Resources
 
@@ -158,7 +158,7 @@ Then use `"command": "node", "args": ["/path/to/modsharp-public-mcp/dist/index.j
 - `modsharp://entity/{classname}` - CS2 Hammer entity definitions (JSON)
 - `modsharp://namespaces` - Full namespace hierarchy (JSON)
 - `modsharp://toc` - Documentation table of contents (JSON)
-- `modsharp://vre/games` - Valve engine schema index across CS2/Dota2/Deadlock (JSON)
+- `modsharp://schema/games` - Valve engine schema index across CS2/Dota2/Deadlock (JSON)
 
 ## Data Stats (as of 2026-07-19)
 

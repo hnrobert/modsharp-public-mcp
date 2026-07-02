@@ -62,19 +62,19 @@ export function registerAllResources(
     }),
   );
 
-  // CS2 Schema classes
-  for (const [uid, schema] of data.schemas) {
+  // CS2 header schema classes (GameTracking C++ headers)
+  for (const [uid, schema] of data.headerSchemas) {
     server.registerResource(
-      `schema-${uid}`,
-      `modsharp://schema/${uid}`,
+      `header-schema-${uid}`,
+      `modsharp://header-schema/${uid}`,
       {
-        description: `CS2 schema: ${schema.name}${schema.parent ? ` extends ${schema.parent}` : ''} (${schema.networkVars.length} net vars)`,
+        description: `CS2 header schema: ${schema.name}${schema.parent ? ` extends ${schema.parent}` : ''} (${schema.networkVars.length} net vars)`,
         mimeType: 'application/json',
       },
       async () => ({
         contents: [
           {
-            uri: `modsharp://schema/${uid}`,
+            uri: `modsharp://header-schema/${uid}`,
             mimeType: 'application/json',
             text: JSON.stringify(schema, null, 2),
           },
@@ -104,11 +104,11 @@ export function registerAllResources(
     );
   }
 
-  // VRE schema index (ValveResourceFormat: CS2/Dota2/Deadlock).
+  // Engine schema index (ValveResourceFormat: CS2/Dota2/Deadlock).
   // Single aggregate resource — per-item registration (29k+) would overwhelm resources/list.
   server.registerResource(
-    'vre-games',
-    'modsharp://vre/games',
+    'schema-games',
+    'modsharp://schema/games',
     {
       description:
         'Valve engine schema index (ValveResourceFormat/SchemaExplorer) across CS2/Dota2/Deadlock — per-game revision, version, class/enum counts',
@@ -117,15 +117,15 @@ export function registerAllResources(
     async () => ({
       contents: [
         {
-          uri: 'modsharp://vre/games',
+          uri: 'modsharp://schema/games',
           mimeType: 'application/json',
           text: JSON.stringify(
             {
               source: 'ValveResourceFormat/SchemaExplorer',
-              note: 'Use search_vre_schemas / get_vre_schema_type / get_vre_enum tools to query individual classes and enums.',
-              games: data.vreGames,
-              totalClasses: data.vreSchemas.size,
-              totalEnums: data.vreEnums.size,
+              note: 'Use search_schemas / get_schema_fields / get_enum tools to query individual classes and enums.',
+              games: data.schemaGames,
+              totalClasses: data.schemas.size,
+              totalEnums: data.enums.size,
             },
             null,
             2,

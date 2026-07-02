@@ -1,23 +1,23 @@
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { resolve, join } from 'node:path';
 import type {
-  VreGame,
-  VreGameInfo,
-  VreFieldType,
-  VreMeta,
-  VreSchemaBundle,
-  VreSchemaClass,
-  VreSchemaEnum,
-  VreSchemaEnumMember,
-  VreSchemaField,
+  SchemaGame,
+  SchemaGameInfo,
+  SchemaFieldType,
+  SchemaMeta,
+  SchemaBundle,
+  SchemaClass,
+  SchemaEnum,
+  SchemaEnumMember,
+  SchemaField,
 } from '../src/types.js';
-import { renderVreType } from '../src/vre/render.js';
+import { renderSchemaType } from '../src/vre/render.js';
 
 const PROJECT_ROOT = resolve(import.meta.dirname, '..');
 const FETCH_DIR = resolve(PROJECT_ROOT, 'data/fetched/vre-schemas');
 const OUTPUT_DIR = resolve(PROJECT_ROOT, 'data/generated');
 
-const GAMES: readonly VreGame[] = ['cs2', 'dota2', 'deadlock'];
+const GAMES: readonly SchemaGame[] = ['cs2', 'dota2', 'deadlock'];
 
 // Truncate long KV3 metadata values (e.g. MGetKV3ClassDefaults) to bound size.
 const META_VALUE_MAX = 200;
@@ -72,7 +72,7 @@ interface RawFile {
   enums: RawEnum[];
 }
 
-function trimMeta(meta: RawMeta[] | undefined): VreMeta[] | undefined {
+function trimMeta(meta: RawMeta[] | undefined): SchemaMeta[] | undefined {
   if (!meta || meta.length === 0) return undefined;
   return meta.map((m) => ({
     name: m.name,
@@ -87,7 +87,7 @@ function trimMeta(meta: RawMeta[] | undefined): VreMeta[] | undefined {
 
 // Coerce the loosely-typed raw type tree into our discriminated union,
 // degrading gracefully on anything unexpected.
-function coerceType(t: RawType): VreFieldType {
+function coerceType(t: RawType): SchemaFieldType {
   switch (t.category) {
     case 'builtin':
       return { category: 'builtin', name: t.name ?? 'unknown' };
@@ -131,9 +131,9 @@ function coerceType(t: RawType): VreFieldType {
 async function main(): Promise<void> {
   console.log('Parsing VRE schemas from:', FETCH_DIR);
 
-  const classes: Record<string, VreSchemaClass> = {};
-  const enums: Record<string, VreSchemaEnum> = {};
-  const games = {} as Record<VreGame, VreGameInfo>;
+  const classes: Record<string, SchemaClass> = {};
+  const enums: Record<string, SchemaEnum> = {};
+  const games = {} as Record<SchemaGame, SchemaGameInfo>;
 
   for (const game of GAMES) {
     const filePath = resolve(FETCH_DIR, `${game}.json`);
@@ -156,13 +156,13 @@ async function main(): Promise<void> {
         classDup++;
         continue;
       }
-      const fields: VreSchemaField[] = (c.fields ?? []).map((f) => {
+      const fields: SchemaField[] = (c.fields ?? []).map((f) => {
         const type = coerceType(f.type);
         return {
           name: f.name,
           offset: f.offset,
           type,
-          renderedType: renderVreType(type),
+          renderedType: renderSchemaType(type),
           metadata: trimMeta(f.metadata),
         };
       });
@@ -188,7 +188,7 @@ async function main(): Promise<void> {
         enumDup++;
         continue;
       }
-      const members: VreSchemaEnumMember[] = (e.members ?? []).map((m) => ({
+      const members: SchemaEnumMember[] = (e.members ?? []).map((m) => ({
         name: m.name,
         value: m.value,
         metadata: trimMeta(m.metadata),
@@ -216,7 +216,7 @@ async function main(): Promise<void> {
     );
   }
 
-  const bundle: VreSchemaBundle = {
+  const bundle: SchemaBundle = {
     generatedAt: new Date().toISOString(),
     games,
     classes,

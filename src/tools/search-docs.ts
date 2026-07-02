@@ -1,6 +1,6 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
-import type { LoadedData, DocArticle } from '../types.js';
+import type { LoadedData } from '../types.js';
 import { tokenize, searchEntries, type SearchEntry } from '../search/index.js';
 
 export function registerSearchDocsTool(
@@ -83,8 +83,8 @@ export function registerSearchDocsTool(
         });
       }
 
-      // Add CS2 schemas
-      for (const [uid, schema] of data.schemas) {
+      // Add CS2 header schemas
+      for (const [uid, schema] of data.headerSchemas) {
         const text = `${schema.name} ${schema.parent || ''} ${schema.networkVars.map((f) => f.name).join(' ')}`;
         entries.push({
           id: uid,

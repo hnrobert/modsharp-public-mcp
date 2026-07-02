@@ -21,12 +21,12 @@ async function main() {
     return (r.content as Array<{ text: string }>)[0]?.text ?? '';
   };
 
-  console.log('\n--- search_vre_schemas(CBaseEntity, cs2) ---');
-  console.log((await call('search_vre_schemas', { query: 'CBaseEntity', game: 'cs2', limit: 3 })).slice(0, 500));
+  console.log('\n--- search_schemas(CBaseEntity, cs2) ---');
+  console.log((await call('search_schemas', { query: 'CBaseEntity', game: 'cs2', limit: 3 })).slice(0, 500));
 
-  console.log('\n--- get_vre_schema_type(cs2/server/CBaseEntity) ---');
+  console.log('\n--- get_schema_fields(cs2/server/CBaseEntity) ---');
   const t = JSON.parse(
-    await call('get_vre_schema_type', { uid: 'cs2/server/CBaseEntity' }),
+    await call('get_schema_fields', { uid: 'cs2/server/CBaseEntity' }),
   );
   console.log(
     `name: ${t.name} | size: ${t.size} | fields: ${t.fields.length} | _resolvedParents: ${JSON.stringify(t._resolvedParents)}`,
@@ -39,23 +39,23 @@ async function main() {
       .join(', '),
   );
 
-  console.log('\n--- get_vre_enum(cs2/server/MoveType_t) ---');
+  console.log('\n--- get_enum(cs2/server/MoveType_t) ---');
   const e = JSON.parse(
-    await call('get_vre_enum', { uid: 'cs2/server/MoveType_t' }),
+    await call('get_enum', { uid: 'cs2/server/MoveType_t' }),
   );
   console.log(
     `name: ${e.name} | members: ${e.members.length} | sample: ${e.members.slice(0, 3).map((m: { name: string; value: number }) => `${m.name}=${m.value}`).join(', ')}`,
   );
 
-  console.log('\n--- get_vre_schema_type(CBaseEntity) [bare-name fallback] ---');
+  console.log('\n--- get_schema_fields(CBaseEntity) [bare-name fallback] ---');
   const t2 = JSON.parse(
-    await call('get_vre_schema_type', { uid: 'CBaseEntity' }),
+    await call('get_schema_fields', { uid: 'CBaseEntity' }),
   );
   console.log('resolved uid:', t2.uid);
 
-  console.log('\n--- cross-game: search_vre_schemas(CBaseEntity, all) ---');
+  console.log('\n--- cross-game: search_schemas(CBaseEntity, all) ---');
   const cg = JSON.parse(
-    await call('search_vre_schemas', { query: 'CBaseEntity', game: 'all', limit: 10 }),
+    await call('search_schemas', { query: 'CBaseEntity', game: 'all', limit: 10 }),
   );
   console.log(
     'hits by game:',
@@ -68,7 +68,7 @@ async function main() {
 
   const res = await client.listResources();
   console.log(
-    `\nResources: ${res.resources.length} (vre/games present? ${res.resources.some((r) => r.uri === 'modsharp://vre/games')})`,
+    `\nResources: ${res.resources.length} (schema/games present? ${res.resources.some((r) => r.uri === 'modsharp://schema/games')})`,
   );
 
   await client.close();

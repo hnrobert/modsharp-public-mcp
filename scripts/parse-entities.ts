@@ -1,6 +1,6 @@
 import { readFile, writeFile, mkdir, readdir } from 'node:fs/promises';
 import { resolve, join } from 'node:path';
-import type { EntityClass, EntityProperty, EntityInputOutput, SchemaClass } from '../src/types.js';
+import type { EntityClass, EntityProperty, EntityInputOutput, HeaderSchemaClass } from '../src/types.js';
 
 const PROJECT_ROOT = resolve(import.meta.dirname, '..');
 const OUTPUT_DIR = resolve(PROJECT_ROOT, 'data/generated');
@@ -112,7 +112,7 @@ async function main(): Promise<void> {
   console.log(`Filtered to ${Object.keys(entities).length} CS2 entities`);
 
   // Cross-reference with schemas
-  let schemas: Record<string, SchemaClass> = {};
+  let schemas: Record<string, HeaderSchemaClass> = {};
   try {
     const schemasRaw = await readFile(join(OUTPUT_DIR, 'schemas.json'), 'utf-8');
     schemas = JSON.parse(schemasRaw);

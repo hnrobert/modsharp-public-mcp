@@ -1,38 +1,38 @@
 import { describe, it, expect } from 'vitest';
-import { renderVreType } from '../src/vre/render.js';
-import type { VreFieldType } from '../src/types.js';
+import { renderSchemaType } from '../src/vre/render.js';
+import type { SchemaFieldType } from '../src/types.js';
 
-describe('renderVreType', () => {
+describe('renderSchemaType', () => {
   it('renders builtin', () => {
-    const t: VreFieldType = { category: 'builtin', name: 'float32' };
-    expect(renderVreType(t)).toBe('float32');
+    const t: SchemaFieldType = { category: 'builtin', name: 'float32' };
+    expect(renderSchemaType(t)).toBe('float32');
   });
 
   it('renders declared_class (drops module)', () => {
-    const t: VreFieldType = {
+    const t: SchemaFieldType = {
       category: 'declared_class',
       module: 'server',
       name: 'CBaseEntity',
     };
-    expect(renderVreType(t)).toBe('CBaseEntity');
+    expect(renderSchemaType(t)).toBe('CBaseEntity');
   });
 
   it('renders declared_enum', () => {
-    const t: VreFieldType = {
+    const t: SchemaFieldType = {
       category: 'declared_enum',
       module: 'server',
       name: 'MoveType_t',
     };
-    expect(renderVreType(t)).toBe('MoveType_t');
+    expect(renderSchemaType(t)).toBe('MoveType_t');
   });
 
   it('renders atomic without inner', () => {
-    const t: VreFieldType = { category: 'atomic', name: 'Vector' };
-    expect(renderVreType(t)).toBe('Vector');
+    const t: SchemaFieldType = { category: 'atomic', name: 'Vector' };
+    expect(renderSchemaType(t)).toBe('Vector');
   });
 
   it('renders atomic with inner (CUtlVector<CHandle<CBaseEntity>>)', () => {
-    const t: VreFieldType = {
+    const t: SchemaFieldType = {
       category: 'atomic',
       name: 'CUtlVector',
       inner: {
@@ -45,11 +45,11 @@ describe('renderVreType', () => {
         },
       },
     };
-    expect(renderVreType(t)).toBe('CUtlVector<CHandle<CBaseEntity>>');
+    expect(renderSchemaType(t)).toBe('CUtlVector<CHandle<CBaseEntity>>');
   });
 
   it('renders ptr', () => {
-    const t: VreFieldType = {
+    const t: SchemaFieldType = {
       category: 'ptr',
       inner: {
         category: 'declared_class',
@@ -57,25 +57,25 @@ describe('renderVreType', () => {
         name: 'CBasePlayerController',
       },
     };
-    expect(renderVreType(t)).toBe('CBasePlayerController*');
+    expect(renderSchemaType(t)).toBe('CBasePlayerController*');
   });
 
   it('renders fixed_array', () => {
-    const t: VreFieldType = {
+    const t: SchemaFieldType = {
       category: 'fixed_array',
       count: 7,
       inner: { category: 'builtin', name: 'bool' },
     };
-    expect(renderVreType(t)).toBe('bool[7]');
+    expect(renderSchemaType(t)).toBe('bool[7]');
   });
 
   it('renders bitfield', () => {
-    const t: VreFieldType = { category: 'bitfield', count: 1 };
-    expect(renderVreType(t)).toBe('bitfield:1');
+    const t: SchemaFieldType = { category: 'bitfield', count: 1 };
+    expect(renderSchemaType(t)).toBe('bitfield:1');
   });
 
   it('renders 4-level nesting (CUtlVector<CUtlVector<char*>>)', () => {
-    const t: VreFieldType = {
+    const t: SchemaFieldType = {
       category: 'atomic',
       name: 'CUtlVector',
       inner: {
@@ -87,6 +87,6 @@ describe('renderVreType', () => {
         },
       },
     };
-    expect(renderVreType(t)).toBe('CUtlVector<CUtlVector<char*>>');
+    expect(renderSchemaType(t)).toBe('CUtlVector<CUtlVector<char*>>');
   });
 });

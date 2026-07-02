@@ -1,6 +1,6 @@
 import { readdir, readFile, writeFile, mkdir } from 'node:fs/promises';
 import { resolve, join, basename, relative } from 'node:path';
-import type { SchemaClass, SchemaField } from '../src/types.js';
+import type { HeaderSchemaClass, HeaderSchemaField } from '../src/types.js';
 
 const PROJECT_ROOT = resolve(import.meta.dirname, '..');
 const SCHEMAS_DIR = resolve(PROJECT_ROOT, 'data/fetched/schemas');
@@ -23,7 +23,7 @@ async function findFiles(dir: string, ext: string): Promise<string[]> {
 function parseSchemaFile(
   filePath: string,
   content: string,
-): SchemaClass | null {
+): HeaderSchemaClass | null {
   const relPath = relative(SCHEMAS_DIR, filePath).replace(/\\/g, '/');
   const category = relPath.split('/')[0]; // "server", "client", "entity2", etc.
 
@@ -70,8 +70,8 @@ function parseSchemaFile(
   }
 
   // Parse fields inside class body
-  const networkFields: SchemaField[] = [];
-  const localFields: SchemaField[] = [];
+  const networkFields: HeaderSchemaField[] = [];
+  const localFields: HeaderSchemaField[] = [];
 
   // Find the opening brace (might be on class line or next line)
   let depth = 0;
@@ -139,7 +139,7 @@ function parseSchemaFile(
     const serializerMatch = currentMeta.find((m) => m.includes('MSerializer'));
     const notSaved = currentMeta.some((m) => m.includes('MNotSaved'));
 
-    const field: SchemaField = {
+    const field: HeaderSchemaField = {
       name: fieldName,
       type: fieldType,
       isNetworked,
@@ -181,7 +181,7 @@ async function main(): Promise<void> {
   const files = await findFiles(SCHEMAS_DIR, '.h');
   console.log(`Found ${files.length} schema files`);
 
-  const schemas: Record<string, SchemaClass> = {};
+  const schemas: Record<string, HeaderSchemaClass> = {};
   let classCount = 0;
   let networkFieldCount = 0;
   const categoryCounts: Record<string, number> = {};

@@ -1,22 +1,22 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
-import type { LoadedData, VreSchemaEnum } from '../types.js';
+import type { LoadedData, SchemaEnum } from '../types.js';
 
-export function registerGetVreEnumTool(
+export function registerGetEnumTool(
   server: McpServer,
   data: LoadedData,
 ): void {
   server.registerTool(
-    'get_vre_enum',
+    'get_enum',
     {
       description:
         'Get all members of a Valve engine enum (from ValveResourceFormat/SchemaExplorer). ' +
         'Returns each member name, integer value, and metadata (friendly name/description). ' +
-        'UID format: "{game}/{module}/{name}". Use search_vre_schemas (kind=enum) to discover.',
+        'UID format: "{game}/{module}/{name}". Use search_schemas (kind=enum) to discover.',
       inputSchema: {
         uid: z
           .string()
-          .describe("VRE enum UID, e.g. 'cs2/server/MoveType_t'"),
+          .describe("Engine enum UID, e.g. 'cs2/server/MoveType_t'"),
       },
       annotations: {
         readOnlyHint: true,
@@ -25,12 +25,12 @@ export function registerGetVreEnumTool(
       },
     },
     async ({ uid }) => {
-      let en: VreSchemaEnum | undefined = data.vreEnums.get(uid);
+      let en: SchemaEnum | undefined = data.enums.get(uid);
 
       // Case-insensitive fallback
       if (!en) {
         const lower = uid.toLowerCase();
-        for (const [key, val] of data.vreEnums) {
+        for (const [key, val] of data.enums) {
           if (key.toLowerCase() === lower) {
             en = val;
             break;
@@ -44,7 +44,7 @@ export function registerGetVreEnumTool(
           ? uid.slice(uid.lastIndexOf('/') + 1)
           : uid;
         const lower = bare.toLowerCase();
-        for (const [, val] of data.vreEnums) {
+        for (const [, val] of data.enums) {
           if (val.name.toLowerCase() === lower) {
             en = val;
             break;
@@ -57,7 +57,7 @@ export function registerGetVreEnumTool(
           content: [
             {
               type: 'text' as const,
-              text: `VRE enum not found: ${uid}. Use search_vre_schemas with kind=enum to find the correct UID.`,
+              text: `Engine enum not found: ${uid}. Use search_schemas with kind=enum to find the correct UID.`,
             },
           ],
           isError: true,

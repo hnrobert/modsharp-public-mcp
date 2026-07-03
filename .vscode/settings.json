@@ -5,6 +5,7 @@
         "animgraphdoclib",
         "animgraphlib",
         "animlib",
+        "bitfield",
         "Buildx",
         "compositematerialslib",
         "cref",

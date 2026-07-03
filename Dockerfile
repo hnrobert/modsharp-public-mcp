@@ -18,6 +18,7 @@ FROM deps AS data
 ARG SKIP_DATA_BUILD=false
 COPY scripts/ scripts/
 COPY src/types.ts src/types.ts
+COPY src/vre/ src/vre/
 
 RUN mkdir -p data/generated
 COPY data/generated/ data/generated/

@@ -4,7 +4,7 @@ An MCP (Model Context Protocol) server that exposes ModSharp CS2 modding framewo
 
 ## What It Does
 
-Provides 10 MCP tools that allow AI assistants to search and browse ModSharp API documentation, CS2 engine schemas, and Hammer entity definitions.
+Provides 13 MCP tools that allow AI assistants to search and browse ModSharp API documentation, CS2 engine schemas, Valve engine schemas (CS2/Dota2/Deadlock), and Hammer entity definitions.
 
 ## IDE Configuration
 
@@ -13,7 +13,7 @@ Provides 10 MCP tools that allow AI assistants to search and browse ModSharp API
 A public instance is available at `modsharp.hnrobert.space`.
 
 | Endpoint | Protocol | Clients |
-|----------|----------|---------|
+| ---------- | ---------- | --------- |
 | `https://modsharp.hnrobert.space/sse` | SSE (2024-11-05) | Older clients |
 | `https://modsharp.hnrobert.space/mcp` | Streamable HTTP (2025-03-26) | Claude Code / Cursor, newer clients |
 
@@ -134,17 +134,20 @@ Then use `"command": "node", "args": ["/path/to/modsharp-public-mcp/dist/index.j
 ## MCP Tools
 
 | Tool | Description |
-|------|-------------|
+| ------ | ------------- |
 | `search_docs` | Full-text search across all documentation, API types, examples, and CS2 schemas |
 | `search_api` | Search ModSharp API types and members by keyword |
 | `get_api_type` | Get full details of a specific ModSharp API type |
 | `list_namespace` | Browse the ModSharp namespace/type hierarchy |
 | `get_guide` | Retrieve a documentation article |
 | `get_code_example` | Get a code example by ID |
-| `search_schemas` | Search CS2 engine schema classes (CBaseEntity, C_CSPlayerPawn, etc.) |
-| `get_schema_type` | Get full details of a CS2 schema class (fields, network vars) |
+| `search_header_schemas` | Search CS2 engine schema header declarations (network fields, C++ headers) |
+| `get_header_schema` | Get full details of a CS2 header schema class (fields, network vars) |
 | `search_entities` | Search CS2 Hammer entity definitions (trigger_multiple, prop_dynamic, etc.) |
 | `get_entity` | Get full details of a CS2 Hammer entity (keyvalues, inputs, outputs) |
+| `search_schemas` | Search Valve engine schemas (full memory layout) across CS2/Dota2/Deadlock |
+| `get_schema_fields` | Get full field layout of a Valve engine schema class (offsets, types, sizes) |
+| `get_enum` | Get members of a Valve engine enum (CS2/Dota2/Deadlock) |
 
 ## MCP Resources
 
@@ -155,6 +158,7 @@ Then use `"command": "node", "args": ["/path/to/modsharp-public-mcp/dist/index.j
 - `modsharp://entity/{classname}` - CS2 Hammer entity definitions (JSON)
 - `modsharp://namespaces` - Full namespace hierarchy (JSON)
 - `modsharp://toc` - Documentation table of contents (JSON)
+- `modsharp://schema/games` - Valve engine schema index across CS2/Dota2/Deadlock (JSON)
 
 ## Data Stats (as of 2026-07-19)
 
@@ -191,6 +195,7 @@ graph LR
     A[GitHub: Kxnrl/modsharp-public<br/>ModSharp C# SDK + Docs] -->|fetch| B[data/fetched/<br/>source cache]
     F[GitHub: SteamTracking/GameTracking-CS2<br/>CS2 Engine Schemas] -->|fetch| B
     G[GitHub: Source2Wiki/Source2Wiki<br/>Entity Definitions] -->|fetch| B
+    V[GitHub: ValveResourceFormat/SchemaExplorer<br/>VRE Schemas (CS2/Dota2/Deadlock)] -->|fetch .gz + gunzip| B
     B -->|parse + index| C[data/generated/<br/>JSON data]
   end
   subgraph runtime["Runtime (MCP_TRANSPORT=stdio | http)"]
@@ -202,7 +207,7 @@ graph LR
 
 **Build-time** (baked into Docker image, no network at runtime):
 
-1. Fetch — Downloads source files from GitHub (modsharp-public + GameTracking-CS2 + Source2Wiki), caches locally
+1. Fetch — Downloads source files from GitHub (modsharp-public + GameTracking-CS2 + Source2Wiki + SchemaExplorer), caches locally
 2. Parse — Extracts API types from C# sources, articles from markdown, CS2 schemas from engine headers, entity definitions from Source2 Wiki JSON
 3. Index — Builds a token-based search index
 

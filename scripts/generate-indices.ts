@@ -4,9 +4,10 @@ import type {
   ApiTypeInfo,
   DocArticle,
   CodeExample,
-  SchemaClass,
+  HeaderSchemaClass,
   EntityClass,
   SearchIndex,
+  SchemaBundle,
 } from '../src/types.js';
 
 const PROJECT_ROOT = resolve(import.meta.dirname, '..');
@@ -41,7 +42,7 @@ function tokenize(text: string): string[] {
 async function main() {
   console.log('Generating search index...');
 
-  const [apiTypesRaw, docsEnRaw, docsCnRaw, examplesRaw, schemasRaw, entitiesRaw] =
+  const [apiTypesRaw, docsEnRaw, docsCnRaw, examplesRaw, schemasRaw, entitiesRaw, vreRaw] =
     await Promise.all([
       readFile(join(OUTPUT_DIR, 'api-types.json'), 'utf-8'),
       readFile(join(OUTPUT_DIR, 'docs-en.json'), 'utf-8'),
@@ -49,14 +50,16 @@ async function main() {
       readFile(join(OUTPUT_DIR, 'examples.json'), 'utf-8'),
       readFile(join(OUTPUT_DIR, 'schemas.json'), 'utf-8'),
       readFile(join(OUTPUT_DIR, 'entities.json'), 'utf-8').catch(() => '{}'),
+      readFile(join(OUTPUT_DIR, 'vre-schemas.json'), 'utf-8').catch(() => null),
     ]);
 
   const apiTypes = JSON.parse(apiTypesRaw) as Record<string, ApiTypeInfo>;
   const docsEn = JSON.parse(docsEnRaw) as DocArticle[];
   const docsCn = JSON.parse(docsCnRaw) as DocArticle[];
   const examples = JSON.parse(examplesRaw) as CodeExample[];
-  const schemas = JSON.parse(schemasRaw) as Record<string, SchemaClass>;
+  const headerSchemas = JSON.parse(schemasRaw) as Record<string, HeaderSchemaClass>;
   const entities = JSON.parse(entitiesRaw) as Record<string, EntityClass>;
+  const bundle = vreRaw ? (JSON.parse(vreRaw) as SchemaBundle) : null;
 
   // Build inverted index: token -> entity IDs
   const invertedIndex = new Map<string, string[]>();
@@ -94,15 +97,15 @@ async function main() {
     addTokens(tokenize(text), `example:${ex.id}`);
   }
 
-  // Index CS2 schemas
-  for (const [uid, schema] of Object.entries(schemas)) {
+  // Index CS2 header schemas (GameTracking)
+  for (const [uid, schema] of Object.entries(headerSchemas)) {
     const text = [
       schema.name,
       schema.parent || '',
       ...schema.networkVars.map((f) => `${f.name} ${f.type}`),
       ...schema.localFields.map((f) => `${f.name} ${f.type}`),
     ].join(' ');
-    addTokens(tokenize(text), `schema:${uid}`);
+    addTokens(tokenize(text), `header-schema:${uid}`);
   }
 
   // Index Source2 entities
@@ -116,6 +119,27 @@ async function main() {
       ...entity.outputs.map((o) => `${o.name} ${o.description}`),
     ].join(' ');
     addTokens(tokenize(text), `entity:${classname}`);
+  }
+
+  // Index engine schema classes (ValveResourceFormat: cs2/dota2/deadlock)
+  if (bundle) {
+    for (const [uid, cls] of Object.entries(bundle.classes)) {
+      const text = [
+        cls.name,
+        cls.module,
+        ...cls.parents.map((p) => p.name),
+        ...cls.fields.map((f) => `${f.name} ${f.renderedType}`),
+        ...(cls.metadata ?? []).map((m) => m.value || '').filter(Boolean),
+      ].join(' ');
+      addTokens(tokenize(text), `schema:${uid}`);
+    }
+    // Index engine enums
+    for (const [uid, en] of Object.entries(bundle.enums)) {
+      const text = [en.name, en.module, ...en.members.map((m) => m.name)].join(
+        ' ',
+      );
+      addTokens(tokenize(text), `enum:${uid}`);
+    }
   }
 
   // Deduplicate index entries and convert to plain object

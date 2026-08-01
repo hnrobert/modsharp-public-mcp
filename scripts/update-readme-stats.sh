@@ -24,11 +24,17 @@ docs_en = load("docs-en.json")
 docs_cn = load("docs-cn.json")
 examples = load("examples.json")
 si = load("search-index.json")
+vre_path = os.path.join(gen, "vre-schemas.json")
+vre = load("vre-schemas.json") if os.path.exists(vre_path) else {"classes": {}, "enums": {}}
 
 members = sum(len(t["members"]) for t in api.values())
 cats = len({s["category"] for s in schemas.values()})
 net_fields = sum(len(s.get("networkVars", [])) for s in schemas.values())
 tokens = len(si.get("tokens", si))
+
+vre_classes = len(vre.get("classes", {}))
+vre_enums = len(vre.get("enums", {}))
+vre_fields = sum(len(c.get("fields", [])) for c in vre.get("classes", {}).values())
 
 entity_props = sum(len(e.get("properties", [])) for e in entities.values())
 entity_inputs = sum(len(e.get("inputs", [])) for e in entities.values())
@@ -47,6 +53,9 @@ print(f"DOCS_EN={len(docs_en)}")
 print(f"DOCS_CN={len(docs_cn)}")
 print(f"EXAMPLES={len(examples)}")
 print(f"TOKENS={tokens}")
+print(f"VRE_CLASSES={vre_classes}")
+print(f"VRE_ENUMS={vre_enums}")
+print(f"VRE_FIELDS={vre_fields}")
 PYEOF
 
 eval "$(GEN="$GEN" python3 -c "$EXTRACT")"
@@ -57,6 +66,7 @@ stats="## Data Stats (as of $LABEL)
 
 - **$API_TYPES** ModSharp API types with **$(printf "%'d" "$MEMBERS")** members
 - **$SCHEMA_CLASSES** CS2/Source2 engine schema classes across **$SCHEMA_CATS** categories with **$(printf "%'d" "$NET_FIELDS")** network fields
+- **$(printf "%'d" "$VRE_CLASSES")** Valve engine schema classes (CS2/Dota2/Deadlock) with **$(printf "%'d" "$VRE_FIELDS")** fields + **$VRE_ENUMS** enums (full memory layout from ValveResourceFormat)
 - **$ENTITY_COUNT** CS2 Hammer entity definitions with **$(printf "%'d" "$ENTITY_PROPS")** properties, **$(printf "%'d" "$ENTITY_INPUTS")** inputs, **$(printf "%'d" "$ENTITY_OUTPUTS")** outputs
 - **$DOCS_EN** English + **$DOCS_CN** Chinese documentation articles
 - **$EXAMPLES** code examples
@@ -91,3 +101,4 @@ echo "Updated README.md with stats for $TAG"
 echo "  $API_TYPES types, $MEMBERS members, $SCHEMA_CLASSES schemas ($SCHEMA_CATS categories), $NET_FIELDS network fields"
 echo "  $ENTITY_COUNT entities ($ENTITY_PROPS props, $ENTITY_INPUTS inputs, $ENTITY_OUTPUTS outputs)"
 echo "  $DOCS_EN EN + $DOCS_CN CN docs, $EXAMPLES examples, $TOKENS tokens"
+echo "  $VRE_CLASSES VRE classes, $VRE_FIELDS fields, $VRE_ENUMS enums (cs2/dota2/deadlock)"

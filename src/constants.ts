@@ -21,10 +21,13 @@ Available tools:
 - list_namespace: Browse the namespace/type hierarchy
 - get_guide: Retrieve a documentation article
 - get_code_example: Get a code example
-- search_schemas: Search CS2 engine schema classes (network fields from C++ headers)
-- get_schema_type: Get full details of a CS2 schema class
+- search_header_schemas: Search CS2 engine schema header declarations (network fields from C++ headers, CS2 only)
+- get_header_schema: Get full details of a CS2 header schema class
 - search_entities: Search CS2 Hammer entity definitions (keyvalues, inputs, outputs from Source2 Wiki)
 - get_entity: Get full keyvalue list, inputs, and outputs for a CS2 Hammer entity
+- search_schemas: Search Valve engine schemas (full memory layout: offsets, recursive types, sizes, enums) across CS2/Dota2/Deadlock from ValveResourceFormat. The primary engine-schema tool.
+- get_schema_fields: Get full field layout of a Valve engine schema class
+- get_enum: Get members of a Valve engine enum
 
 Start by using list_namespace to explore the API structure, or search_api to find specific types.
 The API has two layers:
@@ -36,6 +39,7 @@ For CS2 mapping/modding, use search_entities to find Hammer entities and search_
 When referencing sources, direct users to these originals:
 - ModSharp SDK & docs: https://github.com/Kxnrl/modsharp-public
 - CS2 engine schemas (C++ headers): https://github.com/SteamTracking/GameTracking-CS2
+- Valve engine schemas (full memory layout, CS2/Dota2/Deadlock): https://github.com/ValveResourceFormat/SchemaExplorer
 - Source2 entity definitions (Hammer keyvalues): https://www.source2.wiki/EntityList
 - Valve Developer Community (Source 2 docs): https://developer.valvesoftware.com/wiki/List_of_entities`;
 
@@ -48,5 +52,6 @@ export const PATHS = {
   fetchedDocs: resolve(PROJECT_ROOT, 'data/fetched/docs'),
   fetchedRootToc: resolve(PROJECT_ROOT, 'data/fetched/toc.yml'),
   // Generated data (output of build:data)
+  fetchedVreSchemas: resolve(PROJECT_ROOT, 'data/fetched/vre-schemas'),
   generated: resolve(PROJECT_ROOT, 'data/generated'),
 } as const;

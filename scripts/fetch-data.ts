@@ -1,5 +1,6 @@
 import { mkdir, writeFile, stat } from 'node:fs/promises';
 import { resolve, dirname } from 'node:path';
+import { gunzipSync } from 'node:zlib';
 
 const PROJECT_ROOT = resolve(import.meta.dirname, '..');
 const FETCHED_DIR = resolve(PROJECT_ROOT, 'data/fetched');
@@ -157,6 +158,77 @@ async function fetchFromSource(src: SourceRepo): Promise<void> {
   console.log(`\n  ${downloaded} downloaded, ${cached} cached.\n`);
 }
 
+// ── VRE Schemas (ValveResourceFormat/SchemaExplorer) ──────────────
+// schemas/{game}.json.gz must be downloaded as binary and gunzipped.
+
+const VRE_GAMES = ['cs2', 'dota2', 'deadlock'] as const;
+const VRE_FETCH_DIR = resolve(FETCHED_DIR, 'vre-schemas');
+
+const VRE_SOURCE: SourceRepo = {
+  owner: 'ValveResourceFormat',
+  repo: 'SchemaExplorer',
+  branch: 'main',
+  prefixes: ['schemas/'],
+  extensions: new Set(['.gz']),
+  remap: (p: string) => p, // unused by fetchTree, which only needs owner/repo/branch
+};
+
+// Download + gunzip each game's schemas/{game}.json.gz into vre-schemas/{game}.json
+// (keeps the .gz mirror too). Cached by .gz size.
+async function fetchVreSchemas(): Promise<void> {
+  await mkdir(VRE_FETCH_DIR, { recursive: true });
+  const tree = await fetchTree(VRE_SOURCE);
+  const wanted = new Set(VRE_GAMES.map((g) => `schemas/${g}.json.gz`));
+  const entries = tree.filter((e) => wanted.has(e.path));
+  console.log(`  ${entries.length} VRE schema files to check\n`);
+
+  let downloaded = 0;
+  let cached = 0;
+  for (const entry of entries) {
+    const game = entry.path.slice('schemas/'.length, -'.json.gz'.length);
+    const gzPath = resolve(VRE_FETCH_DIR, `${game}.json.gz`);
+    const jsonPath = resolve(VRE_FETCH_DIR, `${game}.json`);
+
+    // Cache by .gz size
+    if (entry.size != null) {
+      try {
+        const st = await stat(gzPath);
+        if (st.size === entry.size) {
+          cached++;
+          continue;
+        }
+      } catch {
+        /* not cached yet */
+      }
+    }
+
+    const rawUrl = `https://raw.githubusercontent.com/${VRE_SOURCE.owner}/${VRE_SOURCE.repo}/${VRE_SOURCE.branch}/${entry.path}`;
+    const res = await fetch(rawUrl, {
+      headers: { 'User-Agent': 'modsharp-mcp-fetch' },
+    });
+    if (!res.ok) {
+      console.warn(`  Skip ${entry.path}: HTTP ${res.status}`);
+      continue;
+    }
+    const buf = Buffer.from(await res.arrayBuffer());
+    try {
+      const json = gunzipSync(buf);
+      JSON.parse(json.toString('utf-8')); // validate before writing
+      await writeFile(gzPath, buf);
+      await writeFile(jsonPath, json);
+      downloaded++;
+      process.stdout.write(
+        `  ${game}: downloaded (${(buf.length / 1024).toFixed(0)}KB gz)\n`,
+      );
+    } catch (err) {
+      console.warn(
+        `  Failed to decompress/parse ${entry.path}: ${err}. Keeping previous data if any.`,
+      );
+    }
+  }
+  console.log(`  ${downloaded} downloaded, ${cached} cached.\n`);
+}
+
 // ── Main ────────────────────────────────────────────────────────────
 
 async function main(): Promise<void> {
@@ -183,6 +255,9 @@ async function main(): Promise<void> {
       return gitPath.replace('fgd_dump/', 'entities/');
     },
   });
+
+  console.log('── VRE Schemas (ValveResourceFormat/SchemaExplorer) ──');
+  await fetchVreSchemas();
 
   console.log('Done! All source data fetched.');
 }

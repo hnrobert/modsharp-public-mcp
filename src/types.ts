@@ -104,19 +104,20 @@ export interface TocNode {
   children?: TocNode[];
 }
 
-// === CS2 Schema Types ===
-export interface SchemaClass {
+// === Engine Schema — header declarations (GameTracking CS2 C++ headers) ===
+// Served by the header_* tools (search_header_schemas / get_header_schema).
+export interface HeaderSchemaClass {
   uid: string; // "server/CBaseEntity" or "client/C_CSPlayerPawn"
   name: string; // "CBaseEntity"
   parent?: string; // "CEntityInstance"
   category: string; // "server", "client", "entity2", etc.
   sourceFile: string; // "server/CBaseEntity.h"
-  networkVars: SchemaField[];
-  localFields: SchemaField[];
+  networkVars: HeaderSchemaField[];
+  localFields: HeaderSchemaField[];
   kv3Defaults?: Record<string, string>;
 }
 
-export interface SchemaField {
+export interface HeaderSchemaField {
   name: string;
   type: string;
   isNetworked: boolean;
@@ -124,6 +125,78 @@ export interface SchemaField {
   networkUserGroup?: string;
   serializer?: string;
   notSaved?: boolean;
+}
+
+// === Engine Schema — full memory layout (ValveResourceFormat/SchemaExplorer) ===
+// Covers cs2/dota2/deadlock. Served by the schema tools
+// (search_schemas / get_schema_fields / get_enum). Distinct from the header
+// declarations above: this is reverse-engineered struct layout with offsets,
+// recursive types, and enums. On-disk it is still data/fetched/vre-schemas/
+// and data/generated/vre-schemas.json (named after the VRF data source).
+export type SchemaGame = 'cs2' | 'dota2' | 'deadlock';
+
+// Recursive field type, discriminated on `category`.
+export type SchemaFieldType =
+  | { category: 'builtin'; name: string }
+  | { category: 'declared_class'; module: string; name: string }
+  | { category: 'declared_enum'; module: string; name: string }
+  | { category: 'atomic'; name: string; inner?: SchemaFieldType }
+  | { category: 'ptr'; inner: SchemaFieldType }
+  | { category: 'fixed_array'; count: number; inner: SchemaFieldType }
+  | { category: 'bitfield'; count: number };
+
+export interface SchemaMeta {
+  name: string;
+  value?: string;
+}
+
+export interface SchemaField {
+  name: string;
+  offset: number;
+  type: SchemaFieldType;
+  renderedType: string;
+  metadata?: SchemaMeta[];
+}
+
+export interface SchemaClass {
+  uid: string; // "{game}/{module}/{name}"
+  game: SchemaGame;
+  name: string;
+  module: string;
+  size: number;
+  parents: Array<{ module: string; name: string }>;
+  fields: SchemaField[];
+  metadata?: SchemaMeta[];
+}
+
+export interface SchemaEnumMember {
+  name: string;
+  value: number;
+  metadata?: SchemaMeta[];
+}
+
+export interface SchemaEnum {
+  uid: string; // "{game}/{module}/{name}"
+  game: SchemaGame;
+  name: string;
+  module: string;
+  alignment: string;
+  members: SchemaEnumMember[];
+  metadata?: SchemaMeta[];
+}
+
+export interface SchemaGameInfo {
+  revision: string;
+  versionDate: string;
+  classes: number;
+  enums: number;
+}
+
+export interface SchemaBundle {
+  generatedAt: string;
+  games: Record<SchemaGame, SchemaGameInfo>;
+  classes: Record<string, SchemaClass>;
+  enums: Record<string, SchemaEnum>;
 }
 
 // === Source2 Entity (Hammer) ===
@@ -160,11 +233,16 @@ export interface LoadedData {
   docsEn: DocArticle[];
   docsCn: DocArticle[];
   examples: Map<string, CodeExample>;
-  schemas: Map<string, SchemaClass>;
+  headerSchemas: Map<string, HeaderSchemaClass>;
   entities: Map<string, EntityClass>;
   searchIndex: Map<string, string[]>;
   toc: TocNode[];
   methodsIndex: Map<string, string[]>; // lowercase method name -> type UIDs
+  schemas: Map<string, SchemaClass>;
+  enums: Map<string, SchemaEnum>;
+  schemasByGame: Map<SchemaGame, string[]>;
+  enumsByGame: Map<SchemaGame, string[]>;
+  schemaGames: Record<SchemaGame, SchemaGameInfo>;
 }
 
 // === Tool result types ===

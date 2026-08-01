@@ -54,7 +54,7 @@ export function registerGetEntityTool(
       const response: Record<string, unknown> = { ...entity };
 
       if (entity.relatedSchemaUid) {
-        const schema = data.schemas.get(entity.relatedSchemaUid);
+        const schema = data.headerSchemas.get(entity.relatedSchemaUid);
         if (schema) {
           response._relatedSchema = {
             uid: schema.uid,

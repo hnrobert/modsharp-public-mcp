@@ -78,12 +78,12 @@ async function main() {
     (guideResult.content as Array<{ text: string }>)[0]?.text || '';
   console.log(guideText.slice(0, 300));
 
-  // Test search_schemas
+  // Test search_header_schemas
   const schemaSearchResult = await client.callTool({
-    name: 'search_schemas',
+    name: 'search_header_schemas',
     arguments: { query: 'CBaseEntity', category: 'server', limit: 3 },
   });
-  console.log("\nsearch_schemas('CBaseEntity'):");
+  console.log("\nsearch_header_schemas('CBaseEntity'):");
   console.log(
     (schemaSearchResult.content as Array<{ text: string }>)[0]?.text?.slice(
       0,
@@ -91,12 +91,12 @@ async function main() {
     ),
   );
 
-  // Test get_schema_type
+  // Test get_header_schema
   const schemaTypeResult = await client.callTool({
-    name: 'get_schema_type',
+    name: 'get_header_schema',
     arguments: { uid: 'server/CBaseEntity' },
   });
-  console.log("\nget_schema_type('server/CBaseEntity'):");
+  console.log("\nget_header_schema('server/CBaseEntity'):");
   console.log(
     (schemaTypeResult.content as Array<{ text: string }>)[0]?.text?.slice(
       0,

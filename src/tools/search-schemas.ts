@@ -3,6 +3,20 @@ import { z } from 'zod';
 import type { LoadedData } from '../types.js';
 import { tokenize } from '../search/index.js';
 
+interface SchemaSearchHit {
+  uid: string;
+  kind: 'class' | 'enum';
+  game: string;
+  name: string;
+  module: string;
+  size?: number;
+  parentNames?: string[];
+  fieldCount?: number;
+  memberCount?: number;
+  matched: string[];
+  relevanceScore: number;
+}
+
 export function registerSearchSchemasTool(
   server: McpServer,
   data: LoadedData,
@@ -11,21 +25,31 @@ export function registerSearchSchemasTool(
     'search_schemas',
     {
       description:
-        'Search CS2 engine schema classes (CBaseEntity, C_CSPlayerPawn, etc.) from GameTracking-CS2. ' +
-        'Matches class names, parent classes, and field names. Returns network fields and local fields.',
+        'Search Valve engine schemas — full memory layout (offsets, recursive types, sizes, enums) across CS2, Dota 2, and Deadlock, from ValveResourceFormat/SchemaExplorer. ' +
+        'Matches class names, enum names, parent classes, and field/member names. ' +
+        'This is the primary engine-schema tool. (For CS2-only header declarations with network-field markers, use search_header_schemas.) ' +
+        'Use get_schema_fields for a class field layout or get_enum for enum members.',
       inputSchema: {
         query: z
           .string()
           .min(1)
           .max(200)
           .describe(
-            "Search term (class name like 'CBaseEntity', field name like 'm_iHealth')",
+            "Search term (class name like 'CBaseEntity', enum name like 'MoveType_t', or field name like 'm_iHealth')",
           ),
-        category: z
-          .string()
+        game: z
+          .enum(['cs2', 'dota2', 'deadlock', 'all'])
           .default('all')
+          .describe('Filter by game, or "all"'),
+        kind: z
+          .enum(['class', 'enum', 'all'])
+          .default('all')
+          .describe('Filter to classes, enums, or both'),
+        module: z
+          .string()
+          .optional()
           .describe(
-            "Schema category to filter by (e.g. 'server', 'client', 'particles', 'animlib') or 'all'",
+            "Filter by engine module (e.g. 'server', 'client', 'particles', 'pulse_runtime_lib')",
           ),
         limit: z
           .number()
@@ -41,68 +65,105 @@ export function registerSearchSchemasTool(
         openWorldHint: false,
       },
     },
-    async ({ query, category, limit }) => {
+    async ({ query, game, kind, module, limit }) => {
       const queryLower = query.toLowerCase();
       const queryTokens = tokenize(query);
-      const results: Array<{
-        uid: string;
-        name: string;
-        parent?: string;
-        category: string;
-        networkFieldCount: number;
-        matchedFields: string[];
-        relevanceScore: number;
-      }> = [];
+      const results: SchemaSearchHit[] = [];
+      const max = limit ?? 20;
 
-      for (const [uid, schema] of data.schemas) {
-        if (category && category !== 'all' && schema.category !== category)
-          continue;
+      const wantClass = kind === 'class' || kind === 'all';
+      const wantEnum = kind === 'enum' || kind === 'all';
 
-        let score = 0;
-        const matchedFields: string[] = [];
+      if (wantClass) {
+        for (const [uid, cls] of data.schemas) {
+          if (game !== 'all' && cls.game !== game) continue;
+          if (module && cls.module !== module) continue;
 
-        // Class name match
-        const nameLower = schema.name.toLowerCase();
-        if (nameLower === queryLower) score += 10;
-        else if (nameLower.includes(queryLower)) score += 5;
+          let score = 0;
+          const matched: string[] = [];
 
-        // Parent match
-        if (schema.parent && schema.parent.toLowerCase().includes(queryLower))
-          score += 3;
+          const nameLower = cls.name.toLowerCase();
+          if (nameLower === queryLower) score += 10;
+          else if (nameLower.includes(queryLower)) score += 5;
 
-        // Token match on class name
-        const classTokens = new Set(tokenize(schema.name));
-        for (const qt of queryTokens) {
-          if (classTokens.has(qt)) score += 3;
-        }
+          for (const p of cls.parents) {
+            if (p.name.toLowerCase().includes(queryLower)) score += 3;
+          }
 
-        // Field name match
-        for (const field of [...schema.networkVars, ...schema.localFields]) {
-          const fieldLower = field.name.toLowerCase();
-          if (fieldLower === queryLower) {
-            score += 4;
-            matchedFields.push(field.name);
-          } else if (fieldLower.includes(queryLower)) {
-            score += 2;
-            matchedFields.push(field.name);
+          const nameTokens = new Set(tokenize(cls.name));
+          for (const qt of queryTokens) if (nameTokens.has(qt)) score += 3;
+
+          for (const f of cls.fields) {
+            const fl = f.name.toLowerCase();
+            if (fl === queryLower) {
+              score += 4;
+              matched.push(f.name);
+            } else if (fl.includes(queryLower)) {
+              score += 2;
+              matched.push(f.name);
+            }
+          }
+
+          if (score > 0) {
+            results.push({
+              uid,
+              kind: 'class',
+              game: cls.game,
+              name: cls.name,
+              module: cls.module,
+              size: cls.size,
+              parentNames: cls.parents.map((p) => p.name),
+              fieldCount: cls.fields.length,
+              matched: matched.slice(0, 10),
+              relevanceScore: score,
+            });
           }
         }
+      }
 
-        if (score > 0) {
-          results.push({
-            uid,
-            name: schema.name,
-            parent: schema.parent,
-            category: schema.category,
-            networkFieldCount: schema.networkVars.length,
-            matchedFields: matchedFields.slice(0, 10),
-            relevanceScore: score,
-          });
+      if (wantEnum) {
+        for (const [uid, en] of data.enums) {
+          if (game !== 'all' && en.game !== game) continue;
+          if (module && en.module !== module) continue;
+
+          let score = 0;
+          const matched: string[] = [];
+
+          const nameLower = en.name.toLowerCase();
+          if (nameLower === queryLower) score += 10;
+          else if (nameLower.includes(queryLower)) score += 5;
+
+          const nameTokens = new Set(tokenize(en.name));
+          for (const qt of queryTokens) if (nameTokens.has(qt)) score += 3;
+
+          for (const m of en.members) {
+            const ml = m.name.toLowerCase();
+            if (ml === queryLower) {
+              score += 4;
+              matched.push(m.name);
+            } else if (ml.includes(queryLower)) {
+              score += 2;
+              matched.push(m.name);
+            }
+          }
+
+          if (score > 0) {
+            results.push({
+              uid,
+              kind: 'enum',
+              game: en.game,
+              name: en.name,
+              module: en.module,
+              memberCount: en.members.length,
+              matched: matched.slice(0, 10),
+              relevanceScore: score,
+            });
+          }
         }
       }
 
       results.sort((a, b) => b.relevanceScore - a.relevanceScore);
-      const limited = results.slice(0, limit ?? 20);
+      const limited = results.slice(0, max);
 
       return {
         content: [
@@ -112,7 +173,7 @@ export function registerSearchSchemasTool(
               {
                 total: results.length,
                 results: limited,
-                hasMore: results.length > (limit ?? 20),
+                hasMore: results.length > max,
               },
               null,
               2,

@@ -199,6 +199,93 @@ export interface SchemaBundle {
   enums: Record<string, SchemaEnum>;
 }
 
+// === Rosetta (source2rosetta — CS2 signatures / gamedata) ===
+// Entries are kept verbatim from the upstream rolling release; extra fields
+// flow through the index signatures below.
+export interface RosettaFunction {
+  name: string;
+  tier: 'core' | 'high_confidence' | 'experimental' | string;
+  validated?: boolean;
+  signature?: { library?: string; linux?: string; [k: string]: unknown };
+  anchors?: string[];
+  measured?: { int?: number; float?: number; ret?: string; [k: string]: unknown };
+  description?: { text?: string; [k: string]: unknown };
+  prototype?: unknown;
+  bindings?: Array<Record<string, unknown>>;
+  aliases?: string[];
+  offset?: number;
+  class?: string;
+  [k: string]: unknown;
+}
+
+export interface RosettaConvar {
+  name: string;
+  library?: string;
+  description?: string;
+  flags?: string[];
+  flags_raw?: string;
+  addr?: string;
+  [k: string]: unknown;
+}
+
+export interface RosettaEntityIo {
+  name?: string;
+  input?: string;
+  output?: string;
+  member?: string;
+  class?: string;
+  handler?: string;
+  library?: string;
+  offset?: number;
+  addr?: string;
+  abi?: Record<string, unknown>;
+  [k: string]: unknown;
+}
+
+export interface RosettaPulseSurface {
+  name: string;
+  library?: string;
+  display?: string;
+  params?: Array<Record<string, unknown>>;
+  policy?: Record<string, unknown>;
+  [k: string]: unknown;
+}
+
+export interface RosettaCommand {
+  name: string;
+  library?: string;
+  description?: string;
+  flags?: string[];
+  class?: string;
+  ret?: string;
+  [k: string]: unknown;
+}
+
+export interface RosettaUnresolved {
+  name: string;
+  reason?: string;
+  detail?: string;
+}
+
+export interface RosettaBundle {
+  meta: {
+    build: string;
+    version?: string;
+    game?: string;
+    counts: Record<string, number>;
+    generatedAt: string;
+  };
+  functions: RosettaFunction[];
+  convars: RosettaConvar[];
+  entityInputs: RosettaEntityIo[];
+  entityOutputs: RosettaEntityIo[];
+  entityClasses: Record<string, string>;
+  pulse: RosettaPulseSurface[];
+  commands: RosettaCommand[];
+  vscript: RosettaCommand[];
+  unresolved: RosettaUnresolved[];
+}
+
 // === Source2 Entity (Hammer) ===
 export interface EntityClass {
   classname: string;
@@ -243,6 +330,10 @@ export interface LoadedData {
   schemasByGame: Map<SchemaGame, string[]>;
   enumsByGame: Map<SchemaGame, string[]>;
   schemaGames: Record<SchemaGame, SchemaGameInfo>;
+  rosetta: RosettaBundle | null;
+  rosettaFunctions: Map<string, RosettaFunction>; // name -> entry
+  rosettaConvars: Map<string, RosettaConvar>; // name -> entry
+  rosettaUnresolved: Map<string, RosettaUnresolved>; // name -> reason
 }
 
 // === Tool result types ===

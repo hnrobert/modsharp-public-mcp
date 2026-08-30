@@ -262,6 +262,59 @@ async function fetchVreSchemas(): Promise<void> {
   console.log(`  ${downloaded} downloaded, ${cached} cached.\n`);
 }
 
+// ── Rosetta (kamal/source2rosetta) ──────────────────────────────────
+
+// Rolling CS2 gamedata release: assets are overwritten in place, so the URL is
+// stable while the content moves with every CS2 build. Cached by size (HEAD).
+const ROSETTA_DIR = resolve(FETCHED_DIR, 'rosetta');
+const ROSETTA_URL =
+  'https://git.lo.sh/kamal/source2rosetta/releases/download/cs2-latest/rosetta-cs2.json';
+
+async function fetchRosetta(): Promise<void> {
+  await mkdir(ROSETTA_DIR, { recursive: true });
+  const jsonPath = resolve(ROSETTA_DIR, 'rosetta-cs2.json');
+  const UA = { 'User-Agent': 'modsharp-mcp-fetch' };
+
+  // Size-based cache via HEAD (release assets are replaced, not versioned).
+  try {
+    const head = await fetch(ROSETTA_URL, { method: 'HEAD', headers: UA });
+    const len = head.headers.get('content-length');
+    if (head.ok && len) {
+      const st = await stat(jsonPath).catch(() => null);
+      if (st && st.size === Number(len)) {
+        console.log('  rosetta-cs2.json: up to date (cached)');
+        return;
+      }
+    }
+  } catch {
+    /* HEAD not supported / network hiccup — fall through to GET */
+  }
+
+  const res = await fetch(ROSETTA_URL, { headers: UA });
+  if (!res.ok) {
+    if (await stat(jsonPath).catch(() => null)) {
+      console.warn(
+        `  rosetta-cs2.json: HTTP ${res.status} — keeping cached copy`,
+      );
+      return;
+    }
+    throw new Error(`rosetta-cs2.json: HTTP ${res.status} and no cached copy`);
+  }
+  const text = await res.text();
+  let build = '?';
+  try {
+    const data = JSON.parse(text) as { meta?: { source_build?: string } };
+    build = data.meta?.source_build ?? '?';
+    if (build === '?') throw new Error('missing meta.source_build');
+  } catch (err) {
+    throw new Error(`rosetta-cs2.json: invalid payload (${err})`);
+  }
+  await writeFile(jsonPath, text);
+  console.log(
+    `  rosetta-cs2.json: downloaded (build ${build}, ${(Buffer.byteLength(text) / 1048576).toFixed(1)}MB)`,
+  );
+}
+
 // ── Main ────────────────────────────────────────────────────────────
 
 async function main(): Promise<void> {
@@ -291,6 +344,9 @@ async function main(): Promise<void> {
 
   console.log('── VRE Schemas (ValveResourceFormat/SchemaExplorer) ──');
   await fetchVreSchemas();
+
+  console.log('── Rosetta (kamal/source2rosetta) ──');
+  await fetchRosetta();
 
   console.log('Done! All source data fetched.');
 }

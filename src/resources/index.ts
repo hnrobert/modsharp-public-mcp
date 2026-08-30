@@ -134,4 +134,35 @@ export function registerAllResources(
       ],
     }),
   );
+
+  // Rosetta index (source2rosetta) — build freshness + coverage counts
+  const rosetta = data.rosetta;
+  if (rosetta) {
+    server.registerResource(
+      'rosetta-meta',
+      'modsharp://rosetta/meta',
+      {
+        description:
+          'source2rosetta CS2 gamedata index — source build, version, signature/convar/entity-IO coverage counts',
+        mimeType: 'application/json',
+      },
+      async () => ({
+        contents: [
+          {
+            uri: 'modsharp://rosetta/meta',
+            mimeType: 'application/json',
+            text: JSON.stringify(
+              {
+                source: 'https://git.lo.sh/kamal/source2rosetta (cs2-latest release)',
+                note: 'Use search_signatures / get_signature / search_convars / search_entity_io tools to query the data.',
+                ...rosetta.meta,
+              },
+              null,
+              2,
+            ),
+          },
+        ],
+      }),
+    );
+  }
 }

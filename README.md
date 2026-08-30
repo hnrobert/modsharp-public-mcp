@@ -4,7 +4,7 @@ An MCP (Model Context Protocol) server that exposes ModSharp CS2 modding framewo
 
 ## What It Does
 
-Provides 13 MCP tools that allow AI assistants to search and browse ModSharp API documentation, CS2 engine schemas, Valve engine schemas (CS2/Dota2/Deadlock), and Hammer entity definitions.
+Provides 17 MCP tools that allow AI assistants to search and browse ModSharp API documentation, CS2 engine schemas, Valve engine schemas (CS2/Dota2/Deadlock), Hammer entity definitions, and CS2 binary signatures.
 
 ## IDE Configuration
 
@@ -148,6 +148,10 @@ Then use `"command": "node", "args": ["/path/to/modsharp-public-mcp/dist/index.j
 | `search_schemas` | Search Valve engine schemas (full memory layout) across CS2/Dota2/Deadlock |
 | `get_schema_fields` | Get full field layout of a Valve engine schema class (offsets, types, sizes) |
 | `get_enum` | Get members of a Valve engine enum (CS2/Dota2/Deadlock) |
+| `search_signatures` | Search CS2 binary function signatures (Linux byte patterns, anchors, measured args) |
+| `get_signature` | Get the full signature entry for one function or Pulse surface |
+| `search_convars` | Search CS2 console variables (flags, descriptions, addresses) |
+| `search_entity_io` | Search entity input/output offsets and Hammer classname ↔ C++ class mapping |
 
 ## MCP Resources
 
@@ -159,6 +163,7 @@ Then use `"command": "node", "args": ["/path/to/modsharp-public-mcp/dist/index.j
 - `modsharp://namespaces` - Full namespace hierarchy (JSON)
 - `modsharp://toc` - Documentation table of contents (JSON)
 - `modsharp://schema/games` - Valve engine schema index across CS2/Dota2/Deadlock (JSON)
+- `modsharp://rosetta/meta` - source2rosetta CS2 gamedata index: build, version, coverage counts (JSON)
 
 ## Data Stats (as of 2026-08-30)
 
@@ -168,6 +173,7 @@ Then use `"command": "node", "args": ["/path/to/modsharp-public-mcp/dist/index.j
 - **479** CS2 Hammer entity definitions with **8078** properties, **9207** inputs, **3045** outputs
 - **47** English + **44** Chinese documentation articles
 - **34** code examples
+- **8255** CS2 function signatures + **1529** convars + **269** entity I/O offsets from source2rosetta (build 25000182, Linux)
 - **85744** search index tokens
 
 ## Development
@@ -196,7 +202,8 @@ graph LR
     A["GitHub: Kxnrl/modsharp-public<br/>ModSharp C# SDK + Docs"] -->|fetch| B["data/fetched/<br/>source cache"]
     F["GitHub: SteamTracking/GameTracking-CS2<br/>CS2 Engine Schemas"] -->|fetch| B
     G["GitHub: Source2Wiki/Source2Wiki<br/>Entity Definitions"] -->|fetch| B
-    V["GitHub: ValveResourceFormat/SchemaExplorer<br/>VRE Schemas (CS2/Dota2/Deadlock)"] -->|fetch .gz + gunzip| B
+    V["GitHub: ValveResourceFormat/SchemaExplorer<br/>VRE Schemas (CS2/Dota2/Deadlock)"] -->|fetch| B
+    RO["git.lo.sh: kamal/source2rosetta<br/>CS2 signatures (Linux)"] -->|fetch| B
     B -->|parse + index| C["data/generated/<br/>JSON data"]
     R["Repo: data/ref/<br/>Reference docs (Panorama)"] -->|parse + index| C
   end
@@ -209,7 +216,7 @@ graph LR
 
 **Build-time** (baked into Docker image, no network at runtime):
 
-1. Fetch — Downloads source files from GitHub (modsharp-public + GameTracking-CS2 + Source2Wiki + SchemaExplorer), caches locally
+1. Fetch — Downloads source files from GitHub (modsharp-public + GameTracking-CS2 + Source2Wiki + SchemaExplorer) and the source2rosetta rolling release, caches locally
 2. Parse — Extracts API types from C# sources, articles from markdown, CS2 schemas from engine headers, entity definitions from Source2 Wiki JSON
 3. Index — Builds a token-based search index
 

@@ -13,6 +13,10 @@ import type {
   SchemaGameInfo,
   SchemaClass,
   SchemaEnum,
+  RosettaBundle,
+  RosettaFunction,
+  RosettaConvar,
+  RosettaUnresolved,
   LoadedData,
 } from '../types.js';
 import { PATHS } from '../constants.js';
@@ -104,6 +108,20 @@ export async function loadData(): Promise<LoadedData> {
     ? schemaBundle.games
     : ({} as Record<SchemaGame, SchemaGameInfo>);
 
+  // Rosetta signatures (source2rosetta) — optional dataset
+  const rosetta = await readJson<RosettaBundle>('rosetta.json').catch(
+    () => null,
+  );
+  const rosettaFunctions = new Map<string, RosettaFunction>(
+    rosetta ? rosetta.functions.map((f) => [f.name, f]) : [],
+  );
+  const rosettaConvars = new Map<string, RosettaConvar>(
+    rosetta ? rosetta.convars.map((c) => [c.name, c]) : [],
+  );
+  const rosettaUnresolved = new Map<string, RosettaUnresolved>(
+    rosetta ? rosetta.unresolved.map((u) => [u.name, u]) : [],
+  );
+
   return {
     types,
     namespaces,
@@ -120,5 +138,9 @@ export async function loadData(): Promise<LoadedData> {
     schemasByGame,
     enumsByGame,
     schemaGames,
+    rosetta,
+    rosettaFunctions,
+    rosettaConvars,
+    rosettaUnresolved,
   };
 }

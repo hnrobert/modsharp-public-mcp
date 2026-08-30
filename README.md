@@ -198,6 +198,7 @@ graph LR
     G["GitHub: Source2Wiki/Source2Wiki<br/>Entity Definitions"] -->|fetch| B
     V["GitHub: ValveResourceFormat/SchemaExplorer<br/>VRE Schemas (CS2/Dota2/Deadlock)"] -->|fetch .gz + gunzip| B
     B -->|parse + index| C["data/generated/<br/>JSON data"]
+    R["Repo: data/ref/<br/>Reference docs (Panorama)"] -->|parse + index| C
   end
   subgraph runtime["Runtime (MCP_TRANSPORT=stdio | http)"]
     C -->|load| D["MCP server"]
@@ -211,6 +212,11 @@ graph LR
 1. Fetch — Downloads source files from GitHub (modsharp-public + GameTracking-CS2 + Source2Wiki + SchemaExplorer), caches locally
 2. Parse — Extracts API types from C# sources, articles from markdown, CS2 schemas from engine headers, entity definitions from Source2 Wiki JSON
 3. Index — Builds a token-based search index
+
+**Reference docs** — committed under `data/ref/en-us/references/` (not fetched), served by `search_docs` / `get_guide` under the `references` category:
+
+- `custom-hud-layout` & `panorama-css` — English translations of community field notes on CS2's `custom_hud_layout` (unlocked 2026-08-25), verified on live servers (CS2 1.41.7.7, 2026-08); original research by the TnmsGameHud project
+- `panorama-css-properties` — the verbatim Panorama stylesheet registry: 140 properties with Valve's own doc strings, read out of `game/bin/linuxsteamrt64/libpanorama.so` (CStylePropertyFactory registration) — the same text the `dump_panorama_css_properties` console command prints
 
 Only `data/generated/` (final JSON) enters the Docker image.
 

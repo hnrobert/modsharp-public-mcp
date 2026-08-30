@@ -111,49 +111,6 @@ jobs:
           git tag "$TAG"
           git push origin "refs/tags/$TAG"
 
-      # ── Sync develop with main (发版 或 定时数据更新后) ───
-      - name: Sync develop with main
-        # 只要有新提交被推到 main，就同步到 develop。两种情形：
-        #   1. workflow_dispatch 打 semver tag 发版
-        #   2. schedule 定时任务检测到数据变更并已提交到 main
-        # 注意：定时任务的 push 用 GITHUB_TOKEN，不会触发 sync-develop.yml
-        # （GitHub 防递归），所以同步必须在本 workflow 内完成。
-        if: >
-          github.ref == 'refs/heads/main' && (
-            (github.event_name == 'workflow_dispatch' && steps.prep.outputs.is_semver == 'true') ||
-            (github.event_name == 'schedule' && steps.changes.outputs.has_changes == 'true')
-          )
-        shell: bash
-        run: |
-          set -euo pipefail
-          git fetch origin develop main
-          if ! git show-ref --verify --quiet refs/remotes/origin/develop; then
-            echo "::notice::develop branch does not exist, skipping sync."
-            exit 0
-          fi
-          # 用远程引用判断是否已是最新，避免切到 develop 之后还要切回 main
-          if git merge-base --is-ancestor origin/main origin/develop; then
-            echo "::notice::develop is already up to date with main."
-            exit 0
-          fi
-          git checkout develop
-          # 同步策略：develop 无独有提交 → 直接快进（ff only）；
-          # 有分叉 → merge commit，冲突一律采用 develop 的内容。
-          # （当前位于 develop，ours = develop；注意 -X ours 是策略选项，
-          #   只偏向冲突块，main 的非冲突改动仍会合入）
-          if git merge-base --is-ancestor HEAD origin/main; then
-            echo "::notice::develop has no unique commits — fast-forwarding."
-            git merge --ff-only origin/main
-          else
-            echo "::notice::develop diverged — merging main, conflicts resolved toward develop."
-            git merge -X ours -m "chore: sync develop with main" origin/main
-          fi
-          git push origin develop
-          # 切回 main，保证后续 Resolve / Docker 构建基于 main 而非 develop
-          # （schedule 路径没有后续 tag checkout，不切回会让构建基于 develop）
-          git checkout main
-          echo "::notice::develop synced with main."
-
       - name: If dispatch with tag, checkout it
         if: github.event_name == 'workflow_dispatch' && steps.prep.outputs.has_tag == 'true'
         run: |
@@ -169,11 +126,8 @@ jobs:
 
           if [[ "${{ github.event_name }}" == "push" && "${GITHUB_REF}" == refs/tags/* ]]; then
             # Tag push: GITHUB_REF_NAME is the tag, not a branch.
-            # Determine branch from the tag's target commit.
-            BRANCH="$(git branch -r --contains "$(git rev-parse HEAD)" \
-              | sed -n 's|.*origin/||p' \
-              | grep -E '^(main|develop)$' | head -1 || true)"
-            if [[ -z "$BRANCH" ]]; then BRANCH="main"; fi
+            # develop branch was removed — releases only ever target main.
+            BRANCH="main"
             TAG="${GITHUB_REF_NAME}"
             echo "branch=$BRANCH"  >> "$GITHUB_OUTPUT"
             echo "tag=$TAG"        >> "$GITHUB_OUTPUT"
@@ -207,13 +161,8 @@ jobs:
 
           if [[ "$BRANCH" == "main" ]]; then
             echo "is_main=true" >> "$GITHUB_OUTPUT"
-            echo "is_develop=false" >> "$GITHUB_OUTPUT"
-          elif [[ "$BRANCH" == "develop" ]]; then
-            echo "is_main=false" >> "$GITHUB_OUTPUT"
-            echo "is_develop=true" >> "$GITHUB_OUTPUT"
           else
             echo "is_main=false" >> "$GITHUB_OUTPUT"
-            echo "is_develop=false" >> "$GITHUB_OUTPUT"
           fi
 
           SHA="$(git rev-parse --short HEAD)"
@@ -236,12 +185,11 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
-            type=raw,value=develop,enable=${{ steps.resolve.outputs.is_develop == 'true' }}
             type=raw,value=latest,enable=${{ steps.resolve.outputs.is_main == 'true' }}
             type=raw,value=${{ steps.resolve.outputs.version }},enable=${{ steps.resolve.outputs.has_semver == 'true' }}
             type=raw,value=${{ steps.resolve.outputs.major_minor }},enable=${{ steps.resolve.outputs.has_semver == 'true' }}
             type=raw,value=${{ steps.resolve.outputs.tag }},enable=${{ steps.resolve.outputs.has_semver == 'false' && steps.resolve.outputs.has_tag == 'true' }}
-            type=raw,value=${{ steps.resolve.outputs.sha }},enable=${{ steps.resolve.outputs.is_main == 'false' && steps.resolve.outputs.is_develop == 'false' && steps.resolve.outputs.has_tag == 'false' }}
+            type=raw,value=${{ steps.resolve.outputs.sha }},enable=${{ steps.resolve.outputs.is_main == 'false' && steps.resolve.outputs.has_tag == 'false' }}
 
       - name: Determine platforms
         id: platforms

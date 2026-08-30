@@ -146,3 +146,9 @@ data/fetched/**
 
 .DS_Store
 Thumbs.db
+
+# Raw reference snapshots (HTML page dumps) — keep them local; only the
+# curated markdown under data/ref/en-us/ is committed and ingested.
+data/ref/*
+!data/ref/en-us/
+!data/ref/en-us/*

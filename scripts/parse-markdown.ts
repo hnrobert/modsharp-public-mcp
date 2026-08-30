@@ -5,6 +5,9 @@ import type { DocArticle, CodeExample, TocNode, Locale } from '../src/types.js';
 const PROJECT_ROOT = resolve(import.meta.dirname, '..');
 const DOCS_DIR = resolve(PROJECT_ROOT, 'data/fetched/docs');
 const ROOT_TOC = resolve(PROJECT_ROOT, 'data/fetched/toc.yml');
+// Curated reference docs committed to the repo (not fetched from GitHub),
+// e.g. data/ref/en-us/references/*.md — ingested through the same pipeline.
+const REF_DIR = resolve(PROJECT_ROOT, 'data/ref');
 const OUTPUT_DIR = resolve(PROJECT_ROOT, 'data/generated');
 
 async function findFiles(dir: string, ext: string): Promise<string[]> {
@@ -48,9 +51,9 @@ function extractTitle(content: string, filename: string): string {
     .replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
-function makeArticleId(filePath: string): string {
-  // Get relative path from docs root
-  const rel = relative(DOCS_DIR, filePath).replace(/\\/g, '/');
+function makeArticleId(filePath: string, root: string = DOCS_DIR): string {
+  // Get relative path from the given docs root
+  const rel = relative(root, filePath).replace(/\\/g, '/');
   return rel.replace(/\.md$/, '');
 }
 
@@ -196,6 +199,29 @@ async function main() {
     const category = detectCategory(file);
 
     const article: DocArticle = { id, locale, title, content, category };
+
+    if (locale === 'en') docsEn.push(article);
+    else docsCn.push(article);
+  }
+
+  // Ingest committed reference docs (data/ref/{en-us,zh-cn}/<category>/*.md).
+  // Same id/locale/category conventions as fetched docs, so search_docs and
+  // get_guide pick them up without any further wiring.
+  const refFiles = await findFiles(REF_DIR, '.md').catch(() => [] as string[]);
+  console.log(`Found ${refFiles.length} local reference markdown files`);
+
+  for (const file of refFiles) {
+    const locale = detectLocale(file);
+    if (!locale) continue;
+
+    const content = await readFile(file, 'utf-8');
+    const article: DocArticle = {
+      id: makeArticleId(file, REF_DIR),
+      locale,
+      title: extractTitle(content, basename(file, '.md')),
+      content,
+      category: detectCategory(file),
+    };
 
     if (locale === 'en') docsEn.push(article);
     else docsCn.push(article);

@@ -28,6 +28,10 @@ Available tools:
 - search_schemas: Search Valve engine schemas (full memory layout: offsets, recursive types, sizes, enums) across CS2/Dota2/Deadlock from ValveResourceFormat. The primary engine-schema tool.
 - get_schema_fields: Get full field layout of a Valve engine schema class
 - get_enum: Get members of a Valve engine enum
+- search_signatures: Search CS2 binary function signatures (Linux byte patterns, anchors, measured args) from source2rosetta
+- get_signature: Get the full signature entry for one function or Pulse surface
+- search_convars: Search CS2 console variables (flags, descriptions, addresses)
+- search_entity_io: Search entity input/output offsets and Hammer classname ↔ C++ class mapping
 
 Start by using list_namespace to explore the API structure, or search_api to find specific types.
 The API has two layers:
@@ -35,11 +39,13 @@ The API has two layers:
 - Sharp.Core: framework internals implementing those interfaces (272 classes) — useful for understanding how things work under the hood
 The main namespace is "Sharp.Shared" with sub-namespaces like Hooks, Managers, GameEntities, etc.
 For CS2 mapping/modding, use search_entities to find Hammer entities and search_schemas for engine internals.
+For native interop (signatures, convars, entity I/O offsets), use the source2rosetta tools — note they cover Linux binaries and tiers range from curated (core) to experimental.
 
 When referencing sources, direct users to these originals:
 - ModSharp SDK & docs: https://github.com/Kxnrl/modsharp-public
 - CS2 engine schemas (C++ headers): https://github.com/SteamTracking/GameTracking-CS2
 - Valve engine schemas (full memory layout, CS2/Dota2/Deadlock): https://github.com/ValveResourceFormat/SchemaExplorer
+- CS2 signatures & gamedata (Linux, by Snake/kamal): https://git.lo.sh/kamal/source2rosetta
 - Source2 entity definitions (Hammer keyvalues): https://www.source2.wiki/EntityList
 - Valve Developer Community (Source 2 docs): https://developer.valvesoftware.com/wiki/List_of_entities`;
 

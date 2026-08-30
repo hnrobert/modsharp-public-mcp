@@ -173,26 +173,32 @@ const VRE_SOURCE: SourceRepo = {
   remap: (p: string) => p, // unused by fetchTree, which only needs owner/repo/branch
 };
 
-// Download + gunzip each game's schemas/{game}.json.gz into vre-schemas/{game}.json
-// (keeps the .gz mirror too). Cached by .gz size.
+// Download each game's schemas/{game}.json into vre-schemas/{game}.json.
+// Upstream shipped plain .json (no .gz) since 2026-08-09; the legacy .json.gz
+// form is still accepted in case it comes back. Cached by file size.
+// IMPORTANT: this function throws when any game ends up without data. It used
+// to skip silently, and when upstream renamed the files every scheduled build
+// for three weeks published a dataset (and Docker image) with no VRE schemas.
 async function fetchVreSchemas(): Promise<void> {
   await mkdir(VRE_FETCH_DIR, { recursive: true });
   const tree = await fetchTree(VRE_SOURCE);
-  const wanted = new Set(VRE_GAMES.map((g) => `schemas/${g}.json.gz`));
-  const entries = tree.filter((e) => wanted.has(e.path));
-  console.log(`  ${entries.length} VRE schema files to check\n`);
 
+  const notFound: string[] = [];
   let downloaded = 0;
   let cached = 0;
-  for (const entry of entries) {
-    const game = entry.path.slice('schemas/'.length, -'.json.gz'.length);
+
+  for (const game of VRE_GAMES) {
+    const plain = tree.find((e) => e.path === `schemas/${game}.json`);
+    const gz = tree.find((e) => e.path === `schemas/${game}.json.gz`);
+    const entry = plain ?? gz;
     const gzPath = resolve(VRE_FETCH_DIR, `${game}.json.gz`);
     const jsonPath = resolve(VRE_FETCH_DIR, `${game}.json`);
 
-    // Cache by .gz size
-    if (entry.size != null) {
+    // Cache by size, against whichever mirror this form uses.
+    if (entry?.size != null) {
+      const cachePath = plain ? jsonPath : gzPath;
       try {
-        const st = await stat(gzPath);
+        const st = await stat(cachePath);
         if (st.size === entry.size) {
           cached++;
           continue;
@@ -202,31 +208,111 @@ async function fetchVreSchemas(): Promise<void> {
       }
     }
 
+    if (!entry) {
+      notFound.push(game);
+      continue;
+    }
+
     const rawUrl = `https://raw.githubusercontent.com/${VRE_SOURCE.owner}/${VRE_SOURCE.repo}/${VRE_SOURCE.branch}/${entry.path}`;
     const res = await fetch(rawUrl, {
       headers: { 'User-Agent': 'modsharp-mcp-fetch' },
     });
     if (!res.ok) {
-      console.warn(`  Skip ${entry.path}: HTTP ${res.status}`);
+      console.warn(`  ${entry.path}: HTTP ${res.status}`);
+      notFound.push(game);
       continue;
     }
     const buf = Buffer.from(await res.arrayBuffer());
     try {
-      const json = gunzipSync(buf);
+      const json = plain ? buf : gunzipSync(buf);
       JSON.parse(json.toString('utf-8')); // validate before writing
-      await writeFile(gzPath, buf);
-      await writeFile(jsonPath, json);
+      if (plain) {
+        await writeFile(jsonPath, json);
+      } else {
+        await writeFile(gzPath, buf);
+        await writeFile(jsonPath, json);
+      }
       downloaded++;
       process.stdout.write(
-        `  ${game}: downloaded (${(buf.length / 1024).toFixed(0)}KB gz)\n`,
+        `  ${game}: downloaded ${entry.path} (${(buf.length / 1024).toFixed(0)}KB)\n`,
       );
     } catch (err) {
-      console.warn(
-        `  Failed to decompress/parse ${entry.path}: ${err}. Keeping previous data if any.`,
-      );
+      console.warn(`  Failed to decompress/parse ${entry.path}: ${err}`);
+      notFound.push(game);
     }
   }
+
+  // Never continue with a partial dataset: every game must have usable local
+  // data, freshly downloaded or cached.
+  const noData: string[] = [];
+  for (const game of VRE_GAMES) {
+    try {
+      await stat(resolve(VRE_FETCH_DIR, `${game}.json`));
+    } catch {
+      noData.push(game);
+    }
+  }
+  if (noData.length > 0) {
+    throw new Error(
+      `VRE schemas unavailable for: ${noData.join(', ')}. ` +
+        `(fetch failures: ${notFound.join(', ') || 'none'} — upstream may have ` +
+        `renamed files again; see schemas/ in ValveResourceFormat/SchemaExplorer.)`,
+    );
+  }
   console.log(`  ${downloaded} downloaded, ${cached} cached.\n`);
+}
+
+// ── Rosetta (kamal/source2rosetta) ──────────────────────────────────
+
+// Rolling CS2 gamedata release: assets are overwritten in place, so the URL is
+// stable while the content moves with every CS2 build. Cached by size (HEAD).
+const ROSETTA_DIR = resolve(FETCHED_DIR, 'rosetta');
+const ROSETTA_URL =
+  'https://git.lo.sh/kamal/source2rosetta/releases/download/cs2-latest/rosetta-cs2.json';
+
+async function fetchRosetta(): Promise<void> {
+  await mkdir(ROSETTA_DIR, { recursive: true });
+  const jsonPath = resolve(ROSETTA_DIR, 'rosetta-cs2.json');
+  const UA = { 'User-Agent': 'modsharp-mcp-fetch' };
+
+  // Size-based cache via HEAD (release assets are replaced, not versioned).
+  try {
+    const head = await fetch(ROSETTA_URL, { method: 'HEAD', headers: UA });
+    const len = head.headers.get('content-length');
+    if (head.ok && len) {
+      const st = await stat(jsonPath).catch(() => null);
+      if (st && st.size === Number(len)) {
+        console.log('  rosetta-cs2.json: up to date (cached)');
+        return;
+      }
+    }
+  } catch {
+    /* HEAD not supported / network hiccup — fall through to GET */
+  }
+
+  const res = await fetch(ROSETTA_URL, { headers: UA });
+  if (!res.ok) {
+    if (await stat(jsonPath).catch(() => null)) {
+      console.warn(
+        `  rosetta-cs2.json: HTTP ${res.status} — keeping cached copy`,
+      );
+      return;
+    }
+    throw new Error(`rosetta-cs2.json: HTTP ${res.status} and no cached copy`);
+  }
+  const text = await res.text();
+  let build = '?';
+  try {
+    const data = JSON.parse(text) as { meta?: { source_build?: string } };
+    build = data.meta?.source_build ?? '?';
+    if (build === '?') throw new Error('missing meta.source_build');
+  } catch (err) {
+    throw new Error(`rosetta-cs2.json: invalid payload (${err})`);
+  }
+  await writeFile(jsonPath, text);
+  console.log(
+    `  rosetta-cs2.json: downloaded (build ${build}, ${(Buffer.byteLength(text) / 1048576).toFixed(1)}MB)`,
+  );
 }
 
 // ── Main ────────────────────────────────────────────────────────────
@@ -258,6 +344,9 @@ async function main(): Promise<void> {
 
   console.log('── VRE Schemas (ValveResourceFormat/SchemaExplorer) ──');
   await fetchVreSchemas();
+
+  console.log('── Rosetta (kamal/source2rosetta) ──');
+  await fetchRosetta();
 
   console.log('Done! All source data fetched.');
 }

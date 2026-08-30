@@ -13,6 +13,10 @@ import { registerGetHeaderSchemaTool } from './get-header-schema.js';
 import { registerSearchSchemasTool } from './search-schemas.js';
 import { registerGetSchemaFieldsTool } from './get-schema-fields.js';
 import { registerGetEnumTool } from './get-enum.js';
+import { registerSearchSignaturesTool } from './search-signatures.js';
+import { registerGetSignatureTool } from './get-signature.js';
+import { registerSearchConvarsTool } from './search-convars.js';
+import { registerSearchEntityIoTool } from './search-entity-io.js';
 
 export function registerAllTools(server: McpServer, data: LoadedData): void {
   registerSearchDocsTool(server, data);
@@ -28,4 +32,8 @@ export function registerAllTools(server: McpServer, data: LoadedData): void {
   registerSearchSchemasTool(server, data);
   registerGetSchemaFieldsTool(server, data);
   registerGetEnumTool(server, data);
+  registerSearchSignaturesTool(server, data);
+  registerGetSignatureTool(server, data);
+  registerSearchConvarsTool(server, data);
+  registerSearchEntityIoTool(server, data);
 }

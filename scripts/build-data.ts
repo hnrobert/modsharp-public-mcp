@@ -25,6 +25,7 @@ run('scripts/parse-markdown.ts', 'Step 2: Parse markdown docs & examples');
 run('scripts/parse-schemas.ts', 'Step 3: Parse CS2 schemas');
 run('scripts/parse-entities.ts', 'Step 4: Parse Source2 entities');
 run('scripts/parse-vre-schemas.ts', 'Step 5: Parse VRE schemas (cs2/dota2/deadlock)');
-run('scripts/generate-indices.ts', 'Step 6: Generate search index');
+run('scripts/parse-rosetta.ts', 'Step 6: Parse Rosetta signatures (source2rosetta)');
+run('scripts/generate-indices.ts', 'Step 7: Generate search index');
 
 console.log('\n=== Build complete! ===');

@@ -23,7 +23,7 @@ export function registerSearchDocsTool(
           .string()
           .optional()
           .describe(
-            'Filter by category: guides, configurations, features, examples',
+            'Filter by category: guides, configurations, features, examples, references',
           ),
         limit: z
           .number()

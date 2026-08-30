@@ -26,6 +26,8 @@ examples = load("examples.json")
 si = load("search-index.json")
 vre_path = os.path.join(gen, "vre-schemas.json")
 vre = load("vre-schemas.json") if os.path.exists(vre_path) else {"classes": {}, "enums": {}}
+ros_path = os.path.join(gen, "rosetta.json")
+ros = load("rosetta.json") if os.path.exists(ros_path) else None
 
 members = sum(len(t["members"]) for t in api.values())
 cats = len({s["category"] for s in schemas.values()})
@@ -35,6 +37,17 @@ tokens = len(si.get("tokens", si))
 vre_classes = len(vre.get("classes", {}))
 vre_enums = len(vre.get("enums", {}))
 vre_fields = sum(len(c.get("fields", [])) for c in vre.get("classes", {}).values())
+
+# VRE data is core: zero counts mean the pipeline degraded upstream of us.
+# Fail instead of publishing "0 classes" into README (that hid a broken
+# dataset for three weeks in 2026-08).
+if not (vre_classes and vre_enums and vre_fields):
+    print(
+        "ERROR: VRE schema counts are zero — data pipeline is degraded, "
+        "refusing to update README stats",
+        file=sys.stderr,
+    )
+    sys.exit(1)
 
 entity_props = sum(len(e.get("properties", [])) for e in entities.values())
 entity_inputs = sum(len(e.get("inputs", [])) for e in entities.values())
@@ -56,6 +69,13 @@ print(f"TOKENS={tokens}")
 print(f"VRE_CLASSES={vre_classes}")
 print(f"VRE_ENUMS={vre_enums}")
 print(f"VRE_FIELDS={vre_fields}")
+
+ros_counts = (ros or {}).get("meta", {}).get("counts", {}) if ros else {}
+ros_build = (ros or {}).get("meta", {}).get("build", "") if ros else ""
+print(f"ROS_FUNCTIONS={ros_counts.get('functions', '')}")
+print(f"ROS_CONVARS={ros_counts.get('convars', '')}")
+print(f"ROS_IO={(int(ros_counts.get('entityInputs', 0) or 0) + int(ros_counts.get('entityOutputs', 0) or 0)) or ''}")
+print(f"ROS_BUILD={ros_build}")
 PYEOF
 
 eval "$(GEN="$GEN" python3 -c "$EXTRACT")"
@@ -70,7 +90,15 @@ stats="## Data Stats (as of $LABEL)
 - **$ENTITY_COUNT** CS2 Hammer entity definitions with **$(printf "%'d" "$ENTITY_PROPS")** properties, **$(printf "%'d" "$ENTITY_INPUTS")** inputs, **$(printf "%'d" "$ENTITY_OUTPUTS")** outputs
 - **$DOCS_EN** English + **$DOCS_CN** Chinese documentation articles
 - **$EXAMPLES** code examples
-- **$(printf "%'d" "$TOKENS")** search index tokens
+"
+
+if [ -n "$ROS_FUNCTIONS" ]; then
+  stats="$stats- **$(printf "%'d" "$ROS_FUNCTIONS")** CS2 function signatures + **$(printf "%'d" "$ROS_CONVARS")** convars + **$(printf "%'d" "$ROS_IO")** entity I/O offsets from source2rosetta (build $ROS_BUILD, Linux)
+"
+fi
+
+# Aggregate metric always last
+stats="$stats- **$(printf "%'d" "$TOKENS")** search index tokens
 "
 
 # ── Replace in README ──

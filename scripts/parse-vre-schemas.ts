@@ -224,6 +224,13 @@ async function main(): Promise<void> {
   };
 
   await mkdir(OUTPUT_DIR, { recursive: true });
+  if (Object.keys(games).length === 0) {
+    throw new Error(
+      'No VRE game data parsed — run `pnpm run fetch` first. ' +
+        'Refusing to write an empty vre-schemas.json (this once shipped as ' +
+        'silently-empty data for three weeks).',
+    );
+  }
   await writeFile(
     join(OUTPUT_DIR, 'vre-schemas.json'),
     JSON.stringify(bundle, null, 2),

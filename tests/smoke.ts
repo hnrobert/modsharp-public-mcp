@@ -108,6 +108,36 @@ async function main() {
   const resources = await client.listResources();
   console.log(`\nResources: ${resources.resources.length} registered`);
 
+  // Test search_signatures (rosetta)
+  const sigResult = await client.callTool({
+    name: 'search_signatures',
+    arguments: { query: 'TakeDamage', limit: 3 },
+  });
+  console.log("\nsearch_signatures('TakeDamage'):");
+  console.log(
+    (sigResult.content as Array<{ text: string }>)[0]?.text?.slice(0, 400),
+  );
+
+  // Test search_convars (rosetta)
+  const convarResult = await client.callTool({
+    name: 'search_convars',
+    arguments: { query: 'bot_quota', limit: 3 },
+  });
+  console.log("\nsearch_convars('bot_quota'):");
+  console.log(
+    (convarResult.content as Array<{ text: string }>)[0]?.text?.slice(0, 400),
+  );
+
+  // Test search_entity_io (rosetta)
+  const ioResult = await client.callTool({
+    name: 'search_entity_io',
+    arguments: { query: 'CBombTarget', limit: 5 },
+  });
+  console.log("\nsearch_entity_io('CBombTarget'):");
+  console.log(
+    (ioResult.content as Array<{ text: string }>)[0]?.text?.slice(0, 400),
+  );
+
   await client.close();
   console.log('\nAll tests passed!');
 }

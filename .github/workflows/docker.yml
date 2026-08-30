@@ -111,26 +111,6 @@ jobs:
           git tag "$TAG"
           git push origin "refs/tags/$TAG"
 
-      # ── Sync develop after release on main ────────────────
-      - name: Sync develop with main
-        if: steps.prep.outputs.is_semver == 'true' && github.ref == 'refs/heads/main'
-        shell: bash
-        run: |
-          set -euo pipefail
-          git fetch origin develop
-          if ! git show-ref --verify --quiet refs/remotes/origin/develop; then
-            echo "::notice::develop branch does not exist, skipping sync."
-            exit 0
-          fi
-          git checkout develop
-          if [ "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)" ]; then
-            echo "::notice::develop is already up to date."
-            exit 0
-          fi
-          git merge --ff-only origin/main
-          git push origin develop
-          echo "::notice::develop synced with main."
-
       - name: If dispatch with tag, checkout it
         if: github.event_name == 'workflow_dispatch' && steps.prep.outputs.has_tag == 'true'
         run: |
@@ -146,11 +126,8 @@ jobs:
 
           if [[ "${{ github.event_name }}" == "push" && "${GITHUB_REF}" == refs/tags/* ]]; then
             # Tag push: GITHUB_REF_NAME is the tag, not a branch.
-            # Determine branch from the tag's target commit.
-            BRANCH="$(git branch -r --contains "$(git rev-parse HEAD)" \
-              | sed -n 's|.*origin/||p' \
-              | grep -E '^(main|develop)$' | head -1 || true)"
-            if [[ -z "$BRANCH" ]]; then BRANCH="main"; fi
+            # develop branch was removed — releases only ever target main.
+            BRANCH="main"
             TAG="${GITHUB_REF_NAME}"
             echo "branch=$BRANCH"  >> "$GITHUB_OUTPUT"
             echo "tag=$TAG"        >> "$GITHUB_OUTPUT"
@@ -184,13 +161,8 @@ jobs:
 
           if [[ "$BRANCH" == "main" ]]; then
             echo "is_main=true" >> "$GITHUB_OUTPUT"
-            echo "is_develop=false" >> "$GITHUB_OUTPUT"
-          elif [[ "$BRANCH" == "develop" ]]; then
-            echo "is_main=false" >> "$GITHUB_OUTPUT"
-            echo "is_develop=true" >> "$GITHUB_OUTPUT"
           else
             echo "is_main=false" >> "$GITHUB_OUTPUT"
-            echo "is_develop=false" >> "$GITHUB_OUTPUT"
           fi
 
           SHA="$(git rev-parse --short HEAD)"
@@ -213,12 +185,11 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
-            type=raw,value=develop,enable=${{ steps.resolve.outputs.is_develop == 'true' }}
             type=raw,value=latest,enable=${{ steps.resolve.outputs.is_main == 'true' }}
             type=raw,value=${{ steps.resolve.outputs.version }},enable=${{ steps.resolve.outputs.has_semver == 'true' }}
             type=raw,value=${{ steps.resolve.outputs.major_minor }},enable=${{ steps.resolve.outputs.has_semver == 'true' }}
             type=raw,value=${{ steps.resolve.outputs.tag }},enable=${{ steps.resolve.outputs.has_semver == 'false' && steps.resolve.outputs.has_tag == 'true' }}
-            type=raw,value=${{ steps.resolve.outputs.sha }},enable=${{ steps.resolve.outputs.is_main == 'false' && steps.resolve.outputs.is_develop == 'false' && steps.resolve.outputs.has_tag == 'false' }}
+            type=raw,value=${{ steps.resolve.outputs.sha }},enable=${{ steps.resolve.outputs.is_main == 'false' && steps.resolve.outputs.has_tag == 'false' }}
 
       - name: Determine platforms
         id: platforms

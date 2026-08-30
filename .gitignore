@@ -151,3 +151,4 @@ Thumbs.db
 # curated markdown under data/ref/en-us/ is committed and ingested.
 data/ref/*
 !data/ref/en-us/
+!data/ref/en-us/*

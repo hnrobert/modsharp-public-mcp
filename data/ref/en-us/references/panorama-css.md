@@ -5,7 +5,7 @@
 > from live CS2 servers and stock vcss files. Web names are included, so searching
 > for `flex` or `backdrop-filter` finds where they land.
 >
-> - 140 properties registered; 39 of them have no description
+> - 140 properties registered; 98 carry a description, 42 do not (per the recovered registry)
 > - Hard limit: 255 (the property factory index is one byte)
 > - Sources: `libpanorama.so` / stock vcss / live verification
 > - Statuses: usable / trap / absent / unverified
@@ -13,8 +13,10 @@
 >
 > **Snapshot note:** the original artifact's interactive property table (section 02)
 > and the raw 140-name appendix (section 06) were client-filtered views whose rows
-> did not survive the page snapshot. The narrative sections below are complete and
-> faithful; the missing tables are marked inline.
+> did not survive the page snapshot. The registry itself has since been recovered
+> verbatim from `libpanorama.so` — see the companion doc
+> [Panorama CSS Property Registry](panorama-css-properties.md) for all 140 entries
+> with Valve's own doc strings.
 
 ## 01 — Four facts that change your design
 
@@ -51,10 +53,11 @@ never observed. Families that only expand mechanically (`border-*` / `padding-*`
 etc.) were collapsed to one row in the original, but individual names remained
 searchable.
 
-> **[Missing from snapshot]** The original's filterable property table did not
-> survive the page save. Recover the per-property rows from the original artifact
-> if available; the design-level facts in section 01 and everything below are
-> complete.
+> The original's filterable per-property table did not survive the page save, but
+> the full registry has been recovered from `libpanorama.so` — every property with
+> its description and examples is in
+> [Panorama CSS Property Registry](panorama-css-properties.md). The design-level
+> facts in section 01 and everything below are complete.
 
 ## 03 — Selectors and at-rules
 
@@ -144,9 +147,10 @@ The whitelist is not checked by resourcecompiler. A violating vxml passes with
 takes the whole layout down with it, so the symptom is "the HUD doesn't appear at
 all." Never treat a successful compile as verification.
 
-> **[Missing from snapshot]** The raw list of all 140 registered property names
-> (the `dump_panorama_css_properties` vocabulary, straight from
-> `libpanorama.so`'s CStylePropertyFactory) did not survive the page save.
+> The raw list of all 140 registered property names — the
+> `dump_panorama_css_properties` vocabulary, straight from `libpanorama.so`'s
+> CStylePropertyFactory — now lives in
+> [Panorama CSS Property Registry](panorama-css-properties.md).
 
 ---
 

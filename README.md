@@ -160,15 +160,15 @@ Then use `"command": "node", "args": ["/path/to/modsharp-public-mcp/dist/index.j
 - `modsharp://toc` - Documentation table of contents (JSON)
 - `modsharp://schema/games` - Valve engine schema index across CS2/Dota2/Deadlock (JSON)
 
-## Data Stats (as of 2026-08-23)
+## Data Stats (as of 2026-08-30)
 
-- **632** ModSharp API types with **7202** members
-- **668** CS2/Source2 engine schema classes across **7** categories with **0** network fields
+- **661** ModSharp API types with **7691** members
+- **671** CS2/Source2 engine schema classes across **7** categories with **0** network fields
 - **0** Valve engine schema classes (CS2/Dota2/Deadlock) with **0** fields + **0** enums (full memory layout from ValveResourceFormat)
-- **478** CS2 Hammer entity definitions with **8076** properties, **9207** inputs, **3045** outputs
+- **479** CS2 Hammer entity definitions with **8078** properties, **9207** inputs, **3045** outputs
 - **44** English + **44** Chinese documentation articles
 - **34** code examples
-- **19762** search index tokens
+- **20052** search index tokens
 
 ## Development
 

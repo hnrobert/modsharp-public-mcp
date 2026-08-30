@@ -193,16 +193,16 @@ The `build:data` command automatically fetches the latest source files from [git
 ```mermaid
 graph LR
   subgraph build["Build-time (docker build / pnpm build:data)"]
-    A[GitHub: Kxnrl/modsharp-public<br/>ModSharp C# SDK + Docs] -->|fetch| B[data/fetched/<br/>source cache]
-    F[GitHub: SteamTracking/GameTracking-CS2<br/>CS2 Engine Schemas] -->|fetch| B
-    G[GitHub: Source2Wiki/Source2Wiki<br/>Entity Definitions] -->|fetch| B
-    V[GitHub: ValveResourceFormat/SchemaExplorer<br/>VRE Schemas (CS2/Dota2/Deadlock)] -->|fetch .gz + gunzip| B
-    B -->|parse + index| C[data/generated/<br/>JSON data]
+    A["GitHub: Kxnrl/modsharp-public<br/>ModSharp C# SDK + Docs"] -->|fetch| B["data/fetched/<br/>source cache"]
+    F["GitHub: SteamTracking/GameTracking-CS2<br/>CS2 Engine Schemas"] -->|fetch| B
+    G["GitHub: Source2Wiki/Source2Wiki<br/>Entity Definitions"] -->|fetch| B
+    V["GitHub: ValveResourceFormat/SchemaExplorer<br/>VRE Schemas (CS2/Dota2/Deadlock)"] -->|fetch .gz + gunzip| B
+    B -->|parse + index| C["data/generated/<br/>JSON data"]
   end
   subgraph runtime["Runtime (MCP_TRANSPORT=stdio | http)"]
-    C -->|load| D[MCP server]
-    D -->|stdio| E[Local IDE]
-    D -->|HTTP SSE / Streamable| H[Remote IDEs]
+    C -->|load| D["MCP server"]
+    D -->|stdio| E["Local IDE"]
+    D -->|HTTP SSE / Streamable| H["Remote IDEs"]
   end
 ```
 

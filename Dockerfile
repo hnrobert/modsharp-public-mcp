@@ -23,6 +23,9 @@ COPY src/vre/ src/vre/
 RUN mkdir -p data/generated
 COPY data/generated/ data/generated/
 
+# Committed reference docs ingested by scripts/parse-markdown.ts (see REF_DIR)
+COPY data/ref/ data/ref/
+
 RUN if [ "$SKIP_DATA_BUILD" = "true" ]; then \
   echo "Skipping data build (using prebuilt data)"; \
   else \

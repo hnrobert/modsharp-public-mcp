@@ -36,6 +36,17 @@ vre_classes = len(vre.get("classes", {}))
 vre_enums = len(vre.get("enums", {}))
 vre_fields = sum(len(c.get("fields", [])) for c in vre.get("classes", {}).values())
 
+# VRE data is core: zero counts mean the pipeline degraded upstream of us.
+# Fail instead of publishing "0 classes" into README (that hid a broken
+# dataset for three weeks in 2026-08).
+if not (vre_classes and vre_enums and vre_fields):
+    print(
+        "ERROR: VRE schema counts are zero — data pipeline is degraded, "
+        "refusing to update README stats",
+        file=sys.stderr,
+    )
+    sys.exit(1)
+
 entity_props = sum(len(e.get("properties", [])) for e in entities.values())
 entity_inputs = sum(len(e.get("inputs", [])) for e in entities.values())
 entity_outputs = sum(len(e.get("outputs", [])) for e in entities.values())

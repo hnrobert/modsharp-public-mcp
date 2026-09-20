@@ -165,16 +165,16 @@ Then use `"command": "node", "args": ["/path/to/modsharp-public-mcp/dist/index.j
 - `modsharp://schema/games` - Valve engine schema index across CS2/Dota2/Deadlock (JSON)
 - `modsharp://rosetta/meta` - source2rosetta CS2 gamedata index: build, version, coverage counts (JSON)
 
-## Data Stats (as of 2026-09-13)
+## Data Stats (as of 2026-09-20)
 
-- **661** ModSharp API types with **7695** members
+- **671** ModSharp API types with **7780** members
 - **671** CS2/Source2 engine schema classes across **7** categories with **0** network fields
-- **29515** Valve engine schema classes (CS2/Dota2/Deadlock) with **96909** fields + **2324** enums (full memory layout from ValveResourceFormat)
+- **29518** Valve engine schema classes (CS2/Dota2/Deadlock) with **96927** fields + **2324** enums (full memory layout from ValveResourceFormat)
 - **0** CS2 Hammer entity definitions with **0** properties, **0** inputs, **0** outputs
 - **47** English + **44** Chinese documentation articles
 - **34** code examples
 - **8244** CS2 function signatures + **1533** convars + **269** entity I/O offsets from source2rosetta (build 25218825, Linux)
-- **82377** search index tokens
+- **82443** search index tokens
 
 ## Development
 
